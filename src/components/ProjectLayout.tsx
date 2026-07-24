@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Navigate, NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
+import { Navigate, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { usePanelData } from '../context/PanelDataContext';
 import { TOOL_KEYS } from '../constants';
 import { useSlidingIndicator } from '../hooks/useSlidingIndicator';
@@ -21,6 +21,7 @@ export interface ProjectOutletContext {
 export default function ProjectLayout() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { activeProjectId, setActiveProjectId, activeProjectName, activeProject, projects, loading, scopedAction } = usePanelData();
   const tabbarRef = useRef<HTMLDivElement>(null);
   const [summary, setSummary] = useState<HomeSummary | null>(null);
@@ -49,7 +50,7 @@ export default function ProjectLayout() {
   }, [activeProjectId, scopedAction, reloadTick]);
 
   const activeTools = activeProject?.tools?.length ? activeProject.tools : TOOL_KEYS;
-  useSlidingIndicator(tabbarRef, '.tab.active', 'horizontal', [activeProjectId, activeTools.join(',')]);
+  useSlidingIndicator(tabbarRef, '.tab.active', 'horizontal', [activeProjectId, activeTools.join(','), location.pathname]);
 
   if (!loading && projectId && !projects.some((p) => p.id === projectId)) {
     return <Navigate to="/" replace />;

@@ -118,7 +118,7 @@ export default function ProjectHome() {
           <div className="card2">
             <div className="card2-label">Tráfico Orgánico · GSC</div>
             <div className="card2-value-row">
-              <span className="card2-value-xl tabular">{summary ? (summary.seo_trafico?.clics_organicos ?? '—') : summaryError ? '—' : '…'}</span>
+              <span className="card2-value-xl tabular">{summary ? (summary.seo_trafico?.clics_organicos != null ? summary.seo_trafico.clics_organicos.toLocaleString('es-CL') : '—') : summaryError ? '—' : '…'}</span>
               <span className="card2-value-unit">clics</span>
             </div>
             {summary?.seo_trafico ? (
@@ -136,7 +136,7 @@ export default function ProjectHome() {
             <div className="card2-divider" />
             <div className="card2-mini-row">
               <span>Impresiones</span>
-              <span className="card2-mini-value">{summary?.seo_trafico?.impresiones ?? '—'}</span>
+              <span className="card2-mini-value">{summary?.seo_trafico?.impresiones != null ? summary.seo_trafico.impresiones.toLocaleString('es-CL') : '—'}</span>
             </div>
           </div>
         </Reveal>
@@ -145,7 +145,7 @@ export default function ProjectHome() {
           <div className="card2">
             <div className="card2-label">Comunidad · Total</div>
             <div className="card2-value-row">
-              <span className="card2-value-xl tabular">{summary ? (comunidadTotal ?? '—') : summaryError ? '—' : '…'}</span>
+              <span className="card2-value-xl tabular">{summary ? (comunidadTotal !== null ? comunidadTotal.toLocaleString('es-CL') : '—') : summaryError ? '—' : '…'}</span>
               <span className="card2-value-unit">seguidores</span>
             </div>
             <div className="card2-delta card2-delta-neutral">
@@ -163,15 +163,15 @@ export default function ProjectHome() {
             <div className="card2-divider" />
             <div className="card2-mini-row">
               <span>Instagram</span>
-              <span className="card2-mini-value">{summary?.social.instagram.followers ?? '—'}</span>
+              <span className="card2-mini-value">{summary?.social.instagram.followers != null ? summary.social.instagram.followers.toLocaleString('es-CL') : '—'}</span>
             </div>
             <div className="card2-mini-row">
               <span>Facebook</span>
-              <span className="card2-mini-value">{summary?.social.facebook.followers ?? '—'}</span>
+              <span className="card2-mini-value">{summary?.social.facebook.followers != null ? summary.social.facebook.followers.toLocaleString('es-CL') : '—'}</span>
             </div>
             <div className="card2-mini-row">
               <span>YouTube</span>
-              <span className="card2-mini-value">{summary?.social.youtube.followers ?? '—'}</span>
+              <span className="card2-mini-value">{summary?.social.youtube.followers != null ? summary.social.youtube.followers.toLocaleString('es-CL') : '—'}</span>
             </div>
           </div>
         </Reveal>
@@ -210,7 +210,7 @@ export default function ProjectHome() {
             <div className="card2-label">◆ Claude API · Tokens MTD</div>
             <div className="card2-value-row">
               <span className="card2-value-lg tabular">
-                {spend ? spend.input_tokens + spend.output_tokens : spendError ? '—' : '…'}
+                {spend ? (spend.input_tokens + spend.output_tokens).toLocaleString('es-CL') : spendError ? '—' : '…'}
               </span>
               <span className="card2-value-unit">tokens</span>
             </div>
