@@ -28,6 +28,7 @@ interface PanelDataValue {
   addProject: (name: string, agents?: AgentKey[], tools?: ToolKey[]) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
   updateProject: (id: string, patch: Partial<Project>) => Promise<void>;
+  updateAgentConfig: (agentKey: AgentKey, patch: Partial<AgentConfig>) => Promise<void>;
   scopedAction: <T = unknown>(action: string, extra?: Record<string, unknown>) => Promise<T>;
   loading: boolean;
   refetch: () => Promise<void>;
@@ -122,6 +123,15 @@ export function PanelDataProvider({ children }: { children: ReactNode }) {
     [projects, rawState]
   );
 
+  const updateAgentConfig = useCallback(
+    async (agentKey: AgentKey, patch: Partial<AgentConfig>) => {
+      const next = { ...agentConfigs, [agentKey]: { ...agentConfigs[agentKey], ...patch } };
+      setAgentConfigs(next);
+      await saveState({ ...rawState, agentConfigs: next });
+    },
+    [agentConfigs, rawState]
+  );
+
   const activeProject = projects.find((p) => p.id === activeProjectId);
   const activeProjectName = activeProject?.name || '';
 
@@ -139,6 +149,7 @@ export function PanelDataProvider({ children }: { children: ReactNode }) {
         addProject,
         deleteProject,
         updateProject,
+        updateAgentConfig,
         scopedAction,
         loading,
         refetch,

@@ -25,6 +25,13 @@ export interface AgentStatus {
   tokens_input_total?: number;
   tokens_output_total?: number;
   tokens_thinking_total?: number;
+  paused?: boolean;
+}
+
+export interface AgentPromptState {
+  prompt: string;
+  is_custom: boolean;
+  default_prompt: string;
 }
 
 export interface ContentPiece {

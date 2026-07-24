@@ -160,6 +160,9 @@ export default function Sidebar() {
         <NavLink to="/thelma-studio" className={({ isActive }) => `config-link${isActive ? ' current' : ''}`}>
           <span className="ico">▶</span> Thelma Studio
         </NavLink>
+        <NavLink to="/configuraciones" className={({ isActive }) => `config-link${isActive ? ' current' : ''}`}>
+          <span className="ico">⚙</span> Configuraciones
+        </NavLink>
       </div>
 
       <div className="sidebar-foot">

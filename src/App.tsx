@@ -28,6 +28,7 @@ import CrmMetricas from './pages/EmailCrm/Metricas';
 import CampanaDetalle from './pages/EmailCrm/CampanaDetalle';
 import Automatizaciones from './pages/EmailCrm/Automatizaciones';
 import { ThelmaStudioWorkspace } from './pages/ThelmaStudio/ThelmaStudioWorkspace';
+import Configuraciones from './pages/Configuraciones';
 
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
@@ -59,6 +60,7 @@ function AppRoutes() {
             <Route path="automatizaciones" element={<Automatizaciones />} />
           </Route>
           <Route path="/thelma-studio" element={<ThelmaStudioWorkspace />} />
+          <Route path="/configuraciones" element={<Configuraciones />} />
           <Route path="/pms" element={<PmsLayout />}>
             <Route index element={<PmsResumen />} />
             <Route path="calendario" element={<PmsCalendario />} />

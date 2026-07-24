@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePanelData } from '../context/PanelDataContext';
 import { AGENT_META, AGENT_FUNCTION_KEYS, DEFAULTS, TOOL_KEYS, statusMeta } from '../constants';
@@ -7,22 +7,42 @@ import { useAuth } from '../context/AuthContext';
 import ContentCalendar from '../components/ContentCalendar';
 import AnalyticsDashboard from '../components/AnalyticsDashboard';
 import TimelineResultModal from '../components/TimelineResultModal';
-import type { AgentKey, TimelineEntry } from '../types';
+import type { AgentKey, AgentPromptState, TimelineEntry } from '../types';
 
 function formatTokens(status: { tokens_input_total?: number; tokens_output_total?: number; tokens_thinking_total?: number } | undefined): string {
   const total = (status?.tokens_input_total || 0) + (status?.tokens_output_total || 0) + (status?.tokens_thinking_total || 0);
   return total.toLocaleString('es-CL');
 }
 
+// Para los agentes sin panel de impacto propio (ContentCalendar/AnalyticsDashboard
+// son solo de Dave/Neil), el proxy honesto de "impacto reciente" es un conteo
+// real de acciones de los ultimos 30 dias desde el timeline ya existente -
+// nunca una metrica de negocio inventada.
+function countRecentActions(timeline: TimelineEntry[] | undefined, days = 30): number {
+  if (!timeline || !timeline.length) return 0;
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+  return timeline.filter((e) => {
+    const t = Date.parse(e.at);
+    return !Number.isNaN(t) && t >= cutoff;
+  }).length;
+}
+
 export default function AgentDetail() {
   const { key } = useParams<{ key: string }>();
   const navigate = useNavigate();
-  const { agentConfigs, agentStatus, contentGrid, activeProject, scopedAction } = usePanelData();
+  const { agentConfigs, agentStatus, contentGrid, activeProject, scopedAction, refetch } = usePanelData();
   const { handleUnauthorized } = useAuth();
   const [manualInput, setManualInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [openResult, setOpenResult] = useState<Record<string, unknown> | null>(null);
+  const [pauseBusy, setPauseBusy] = useState(false);
+
+  const [promptState, setPromptState] = useState<AgentPromptState | null>(null);
+  const [promptDraft, setPromptDraft] = useState('');
+  const [promptLoading, setPromptLoading] = useState(true);
+  const [promptBusy, setPromptBusy] = useState(false);
+  const [promptMsg, setPromptMsg] = useState('');
 
   function openTimelineResult(entry: TimelineEntry) {
     if (!entry.result) return;
@@ -35,13 +55,36 @@ export default function AgentDetail() {
   }
 
   const activeTools = activeProject?.tools?.length ? activeProject.tools : TOOL_KEYS;
+  const agentKey = key as AgentKey;
+  const validAgent = AGENT_FUNCTION_KEYS.includes(agentKey);
+
+  useEffect(() => {
+    if (!validAgent) return;
+    let cancelled = false;
+    setPromptLoading(true);
+    scopedAction<AgentPromptState>('get_agent_prompt', { agent_key: agentKey })
+      .then((data) => {
+        if (cancelled) return;
+        setPromptState(data);
+        setPromptDraft(data.prompt);
+      })
+      .catch((e) => {
+        if (e instanceof UnauthorizedError) handleUnauthorized();
+      })
+      .finally(() => {
+        if (!cancelled) setPromptLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentKey, validAgent]);
+
   if (!activeTools.includes('agentes')) {
     navigate('..', { replace: true });
     return null;
   }
-
-  const agentKey = key as AgentKey;
-  if (!AGENT_FUNCTION_KEYS.includes(agentKey)) {
+  if (!validAgent) {
     navigate('../agentes', { replace: true });
     return null;
   }
@@ -54,8 +97,10 @@ export default function AgentDetail() {
     execution_count: 0,
     updated_at: '',
     timeline: [],
+    paused: false,
   };
   const sMeta = statusMeta(status.status);
+  const hasOwnImpactPanel = agentKey === 'strategist' || agentKey === 'an';
 
   async function triggerManualInvoke() {
     setBusy(true);
@@ -68,10 +113,49 @@ export default function AgentDetail() {
         handleUnauthorized();
         return;
       }
-      setMsg('No se pudo disparar la invocación.');
+      setMsg(e instanceof Error && e.message ? e.message : 'No se pudo disparar la invocación.');
     } finally {
       setBusy(false);
     }
+  }
+
+  async function togglePause() {
+    setPauseBusy(true);
+    try {
+      await scopedAction(status.paused ? 'resume_agent' : 'pause_agent', { agent_key: agentKey });
+      await refetch();
+    } catch (e) {
+      if (e instanceof UnauthorizedError) handleUnauthorized();
+    } finally {
+      setPauseBusy(false);
+    }
+  }
+
+  async function savePrompt() {
+    setPromptBusy(true);
+    setPromptMsg('');
+    try {
+      const result = await scopedAction<{ ok: boolean; is_custom: boolean }>('update_agent_prompt', {
+        agent_key: agentKey,
+        prompt: promptDraft,
+      });
+      setPromptState((prev) => (prev ? { ...prev, prompt: promptDraft, is_custom: result.is_custom } : prev));
+      setPromptMsg('Guardado.');
+    } catch (e) {
+      if (e instanceof UnauthorizedError) {
+        handleUnauthorized();
+        return;
+      }
+      setPromptMsg(e instanceof Error && e.message ? e.message : 'No se pudo guardar.');
+    } finally {
+      setPromptBusy(false);
+    }
+  }
+
+  function restoreDefaultPrompt() {
+    if (!promptState) return;
+    setPromptDraft(promptState.default_prompt);
+    setPromptMsg('');
   }
 
   return (
@@ -91,27 +175,39 @@ export default function AgentDetail() {
       </div>
 
       <div className="agent-page-body">
-        <div className="status">
-          <span className={`status-dot ${sMeta.cls}`} />
-          {sMeta.label}
-        </div>
-        <div className="agent-page-desc">{config.desc}</div>
+        <div className="agent-exec-summary">
+          <div className="status">
+            <span className={`status-dot ${sMeta.cls}`} />
+            {sMeta.label}
+            {status.paused && <span className="pill pending">Pausado</span>}
+          </div>
+          <div className="agent-page-desc">{config.desc}</div>
 
-        <div className="metrics-row">
-          <div className="metric">
-            <div className="metric-label">Ejecuciones</div>
-            <div className="metric-value tabular">{status.execution_count || 0}</div>
-          </div>
-          <div className="metric">
-            <div className="metric-label">Tokens este mes</div>
-            <div className="metric-value tabular">{formatTokens(status)}</div>
-          </div>
-          <div className="metric">
-            <div className="metric-label">Última actualización</div>
-            <div className="metric-value" style={{ fontSize: 12, fontWeight: 500, color: 'var(--dim)' }}>
-              {status.updated_at ? formatWhen(status.updated_at) : 'Nunca'}
+          <div className="metrics-row">
+            <div className="metric">
+              <div className="metric-label">Ejecuciones</div>
+              <div className="metric-value tabular">{(status.execution_count || 0).toLocaleString('es-CL')}</div>
             </div>
+            <div className="metric">
+              <div className="metric-label">Tokens este mes</div>
+              <div className="metric-value tabular">{formatTokens(status)}</div>
+            </div>
+            <div className="metric">
+              <div className="metric-label">Última actualización</div>
+              <div className="metric-value" style={{ fontSize: 12, fontWeight: 500, color: 'var(--dim)' }}>
+                {status.updated_at ? formatWhen(status.updated_at) : 'Nunca'}
+              </div>
+            </div>
+            {!hasOwnImpactPanel && (
+              <div className="metric">
+                <div className="metric-label">Acciones · últimos 30 días</div>
+                <div className="metric-value tabular">{countRecentActions(status.timeline).toLocaleString('es-CL')}</div>
+              </div>
+            )}
           </div>
+
+          {agentKey === 'strategist' ? <ContentCalendar grid={contentGrid} /> : null}
+          {agentKey === 'an' ? <AnalyticsDashboard /> : null}
         </div>
 
         <div>
@@ -145,20 +241,58 @@ export default function AgentDetail() {
           </div>
         </div>
 
-        {agentKey === 'strategist' ? <ContentCalendar grid={contentGrid} /> : null}
-        {agentKey === 'an' ? <AnalyticsDashboard /> : null}
+        <div className="agent-prompt-editor">
+          <div className="desc-label">
+            Instrucción del sistema
+            {promptState?.is_custom && <span className="pill sending" style={{ marginLeft: 8 }}>Personalizado</span>}
+          </div>
+          {promptLoading ? (
+            <div className="empty-state">Cargando instrucción actual…</div>
+          ) : (
+            <>
+              <textarea
+                className="agent-prompt-textarea"
+                value={promptDraft}
+                onChange={(e) => setPromptDraft(e.target.value)}
+                spellCheck={false}
+              />
+              <div className="agent-prompt-actions">
+                <button className="manual-invoke-btn" onClick={savePrompt} disabled={promptBusy || !promptDraft.trim()}>
+                  {promptBusy ? 'Guardando...' : 'Guardar Configuración'}
+                </button>
+                <button className="btn btn-ghost btn-sm" onClick={restoreDefaultPrompt} disabled={promptBusy}>
+                  Restaurar default
+                </button>
+                <div className="manual-invoke-msg">{promptMsg}</div>
+              </div>
+            </>
+          )}
+        </div>
 
         <div className="manual-invoke">
-          <div className="desc-label">Invocación manual</div>
-          <textarea
-            placeholder="Instrucción opcional para esta ejecución puntual..."
-            value={manualInput}
-            onChange={(e) => setManualInput(e.target.value)}
-          />
-          <button className="manual-invoke-btn" onClick={triggerManualInvoke} disabled={busy}>
-            {busy ? 'Disparando...' : 'Ejecutar invocación manual'}
-          </button>
-          <div className="manual-invoke-msg">{msg}</div>
+          <div className="manual-invoke-head">
+            <div className="desc-label">Invocación manual</div>
+            <button className="btn btn-ghost btn-sm" onClick={togglePause} disabled={pauseBusy}>
+              {pauseBusy ? '...' : status.paused ? '▶ Reanudar' : '⏸ Pausar'}
+            </button>
+          </div>
+          {status.paused ? (
+            <div className="manual-invoke-msg" style={{ marginTop: 0 }}>
+              Este agente está pausado para {activeProject?.name || 'este cliente'} — reanudalo para poder invocarlo.
+            </div>
+          ) : (
+            <>
+              <textarea
+                placeholder="Instrucción opcional para esta ejecución puntual..."
+                value={manualInput}
+                onChange={(e) => setManualInput(e.target.value)}
+              />
+              <button className="manual-invoke-btn" onClick={triggerManualInvoke} disabled={busy}>
+                {busy ? 'Disparando...' : 'Ejecutar invocación manual'}
+              </button>
+              <div className="manual-invoke-msg">{msg}</div>
+            </>
+          )}
         </div>
       </div>
 
