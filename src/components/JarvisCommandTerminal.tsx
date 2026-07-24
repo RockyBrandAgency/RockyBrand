@@ -12,7 +12,21 @@
 // modulo que ya usa el agente Filmmaker) - si la voz todavia no esta
 // configurada en SSM, se muestra el motivo real en vez de fallar en silencio
 // o fabricar audio.
+//
+// Ghost Navigation: si Jarvis devuelve navigate_to, es SIEMPRE una clave de
+// un enum cerrado que el backend valida contra su propio JSON schema - nunca
+// un path crudo. El mapeo clave->ruta real vive solo aca (DESTINATION_ROUTES),
+// nunca se le pasa un string del modelo directo a navigate().
+//
+// Visualizador: nivel de audio real via Web Audio API (getUserMedia +
+// AnalyserNode al escuchar, createMediaElementSource + AnalyserNode al
+// reproducir la respuesta) escrito directo a una CSS custom property por
+// requestAnimationFrame - nunca via setState, para no re-renderizar en cada
+// frame. Es decorativo: si el navegador no soporta algo o el permiso de mic
+// falla, el flujo principal (reconocimiento de voz, respuesta, audio) sigue
+// funcionando igual.
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { invokeJarvis, speakJarvis } from '../api';
 import { usePanelData } from '../context/PanelDataContext';
@@ -29,6 +43,7 @@ interface JarvisMessage {
   actionStatus?: MessageStatus;
   voiceState?: VoiceState;
   voiceError?: string;
+  navigatedTo?: string;
 }
 
 let messageSeq = 0;
@@ -36,6 +51,33 @@ function nextId(): string {
   messageSeq += 1;
   return `jarvis-msg-${messageSeq}`;
 }
+
+// Vocabulario cerrado, espejo del NAV_DESTINATIONS del backend
+// (jarvis_orchestrator_lambda.py). Cada clave se mapea a una ruta real de
+// react-router - si Jarvis manda una clave que no esta aca, simplemente no
+// se navega, nunca se intenta con un valor crudo.
+const DESTINATION_ROUTES: Record<string, (projectId: string) => string> = {
+  resumen: (id) => `/p/${id}`,
+  metricas: (id) => `/p/${id}/metricas`,
+  gastos: (id) => `/p/${id}/gastos`,
+  configuracion: (id) => `/p/${id}/configuracion`,
+  agentes: () => '/agentes',
+  reportes: () => '/reportes',
+  email_marketing: () => '/email-marketing',
+  pms: () => '/pms',
+  overview: () => '/',
+};
+const DESTINATION_LABELS: Record<string, string> = {
+  resumen: 'Resumen',
+  metricas: 'Métricas',
+  gastos: 'Resumen de Gastos',
+  configuracion: 'Configuración',
+  agentes: 'Agentes',
+  reportes: 'Reportes',
+  email_marketing: 'Email Marketing',
+  pms: 'PMS',
+  overview: 'Overview',
+};
 
 interface SpeechRecognitionEventLike {
   results: { [index: number]: { [index: number]: { transcript: string }; isFinal: boolean } };
@@ -55,6 +97,7 @@ declare global {
   interface Window {
     SpeechRecognition?: new () => SpeechRecognitionInstance;
     webkitSpeechRecognition?: new () => SpeechRecognitionInstance;
+    webkitAudioContext?: typeof AudioContext;
   }
 }
 
@@ -62,9 +105,34 @@ function getSpeechRecognitionCtor(): (new () => SpeechRecognitionInstance) | nul
   if (typeof window === 'undefined') return null;
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
+function getAudioContextCtor(): typeof AudioContext | null {
+  if (typeof window === 'undefined') return null;
+  return window.AudioContext || window.webkitAudioContext || null;
+}
+
+// Escribe el nivel de volumen (0-1) directo en --level via rAF - nunca
+// setState, para no re-renderizar React en cada frame de audio.
+function startLevelLoop(analyser: AnalyserNode, target: HTMLElement, rafRef: React.MutableRefObject<number | null>) {
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  function tick() {
+    analyser.getByteFrequencyData(data);
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) sum += data[i];
+    const level = Math.min(1, sum / data.length / 140);
+    target.style.setProperty('--level', level.toFixed(3));
+    rafRef.current = requestAnimationFrame(tick);
+  }
+  tick();
+}
+function stopLevelLoop(rafRef: React.MutableRefObject<number | null>, target?: HTMLElement | null) {
+  if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+  rafRef.current = null;
+  target?.style.setProperty('--level', '0');
+}
 
 export default function JarvisCommandTerminal() {
   const { activeProjectId, activeProjectName } = usePanelData();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<JarvisMessage[]>([]);
   const [input, setInput] = useState('');
@@ -78,6 +146,17 @@ export default function JarvisCommandTerminal() {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const speechSupported = getSpeechRecognitionCtor() !== null;
+
+  // Visualizador: escuchando (mic real via getUserMedia)
+  const micVizRef = useRef<HTMLButtonElement>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const micAudioCtxRef = useRef<AudioContext | null>(null);
+  const micRafRef = useRef<number | null>(null);
+
+  // Visualizador: Jarvis hablando (sobre el <audio> de la respuesta)
+  const speakVizRef = useRef<HTMLDivElement>(null);
+  const speakAudioCtxRef = useRef<AudioContext | null>(null);
+  const speakRafRef = useRef<number | null>(null);
 
   useEffect(() => {
     function handleKeydown(e: KeyboardEvent) {
@@ -108,8 +187,62 @@ export default function JarvisCommandTerminal() {
     return () => {
       recognitionRef.current?.stop();
       audioRef.current?.pause();
+      stopMicVisualizer();
+      stopSpeakVisualizer();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function startMicVisualizer() {
+    const Ctor = getAudioContextCtor();
+    if (!Ctor) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micStreamRef.current = stream;
+      const ctx = new Ctor();
+      micAudioCtxRef.current = ctx;
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      if (micVizRef.current) startLevelLoop(analyser, micVizRef.current, micRafRef);
+    } catch {
+      // Decorativo - si no hay permiso de mic para esto, SpeechRecognition
+      // igual puede seguir escuchando por su cuenta.
+    }
+  }
+  function stopMicVisualizer() {
+    stopLevelLoop(micRafRef, micVizRef.current);
+    micStreamRef.current?.getTracks().forEach((t) => t.stop());
+    micStreamRef.current = null;
+    void micAudioCtxRef.current?.close().catch(() => {});
+    micAudioCtxRef.current = null;
+  }
+
+  function startSpeakVisualizer(audio: HTMLAudioElement) {
+    const Ctor = getAudioContextCtor();
+    if (!Ctor) return;
+    try {
+      const ctx = new Ctor();
+      speakAudioCtxRef.current = ctx;
+      void ctx.resume();
+      const source = ctx.createMediaElementSource(audio);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      // Hay que reconectar a destination o el audio queda mudo - createMediaElementSource
+      // redirige la salida del <audio> a traves del grafo de Web Audio.
+      source.connect(analyser);
+      analyser.connect(ctx.destination);
+      if (speakVizRef.current) startLevelLoop(analyser, speakVizRef.current, speakRafRef);
+    } catch {
+      // Decorativo - el audio se reproduce normal aunque esto falle.
+    }
+  }
+  function stopSpeakVisualizer() {
+    stopLevelLoop(speakRafRef, speakVizRef.current);
+    void speakAudioCtxRef.current?.close().catch(() => {});
+    speakAudioCtxRef.current = null;
+  }
 
   async function playJarvisReply(messageId: string, text: string) {
     if (!voiceOutputEnabled || !text.trim()) return;
@@ -121,9 +254,12 @@ export default function JarvisCommandTerminal() {
         return;
       }
       audioRef.current?.pause();
+      stopSpeakVisualizer();
       const audio = new Audio(`data:audio/mpeg;base64,${result.audio_base64}`);
       audioRef.current = audio;
+      audio.onended = () => stopSpeakVisualizer();
       setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, voiceState: 'idle' } : m)));
+      startSpeakVisualizer(audio);
       await audio.play();
     } catch (err) {
       setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, voiceState: 'error', voiceError: err instanceof Error ? err.message : 'Voz no disponible.' } : m)));
@@ -140,6 +276,9 @@ export default function JarvisCommandTerminal() {
         setMessages((prev) => [...prev, { id: nextId(), role: 'error', text: result.error || 'Jarvis no pudo responder.' }]);
       } else {
         const msgId = nextId();
+        const navKey = result.navigate_to;
+        const routeFn = navKey ? DESTINATION_ROUTES[navKey] : undefined;
+        const navPath = routeFn ? routeFn(activeProjectId) : undefined;
         setMessages((prev) => [
           ...prev,
           {
@@ -148,8 +287,10 @@ export default function JarvisCommandTerminal() {
             text: result.reply || '',
             proposedAction: result.proposed_action,
             actionStatus: result.proposed_action ? 'idle' : undefined,
+            navigatedTo: navPath ? navKey ?? undefined : undefined,
           },
         ]);
+        if (navPath) navigate(navPath);
         if (result.reply) void playJarvisReply(msgId, result.reply);
       }
     } catch (err) {
@@ -191,11 +332,18 @@ export default function JarvisCommandTerminal() {
         void sendPrompt(finalTranscript.trim());
       }
     };
-    recognition.onend = () => setListening(false);
-    recognition.onerror = () => setListening(false);
+    recognition.onend = () => {
+      setListening(false);
+      stopMicVisualizer();
+    };
+    recognition.onerror = () => {
+      setListening(false);
+      stopMicVisualizer();
+    };
     recognitionRef.current = recognition;
     setListening(true);
     recognition.start();
+    void startMicVisualizer();
   }
 
   function setActionStatus(messageId: string, status: MessageStatus) {
@@ -223,10 +371,13 @@ export default function JarvisCommandTerminal() {
         >
           <div className="jarvis-panel" ref={panelRef}>
             <div className="jarvis-panel-head">
-              <div>
-                <div className="jarvis-panel-title">Jarvis</div>
-                <div className="jarvis-panel-sub">
-                  {activeProjectName ? `Contexto: ${activeProjectName}` : 'Sin cliente activo'}
+              <div className="jarvis-panel-head-title">
+                <div ref={speakVizRef} className="jarvis-viz jarvis-viz--speak" title="Jarvis hablando" />
+                <div>
+                  <div className="jarvis-panel-title">Jarvis</div>
+                  <div className="jarvis-panel-sub">
+                    {activeProjectName ? `Contexto: ${activeProjectName}` : 'Sin cliente activo'}
+                  </div>
                 </div>
               </div>
               <div className="jarvis-panel-head-actions">
@@ -249,6 +400,9 @@ export default function JarvisCommandTerminal() {
               {messages.map((m) => (
                 <div key={m.id} className={`jarvis-msg jarvis-msg--${m.role}`}>
                   <div className="jarvis-msg-text">{m.text}</div>
+                  {m.navigatedTo && (
+                    <div className="jarvis-nav-note">→ Te llevo a {DESTINATION_LABELS[m.navigatedTo] || m.navigatedTo}</div>
+                  )}
                   {m.role === 'jarvis' && m.voiceState === 'loading' && (
                     <div className="jarvis-voice-status">🔊 generando audio…</div>
                   )}
@@ -287,7 +441,8 @@ export default function JarvisCommandTerminal() {
               {speechSupported && (
                 <button
                   type="button"
-                  className={`jarvis-mic${listening ? ' listening' : ''}`}
+                  ref={micVizRef}
+                  className={`jarvis-mic jarvis-viz${listening ? ' listening' : ''}`}
                   onClick={toggleListening}
                   disabled={!activeProjectId || processing}
                   title={listening ? 'Escuchando… click para detener' : 'Hablarle a Jarvis'}

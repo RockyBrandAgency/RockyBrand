@@ -392,5 +392,6 @@ export interface JarvisResponse {
   ok: boolean;
   reply?: string;
   proposed_action?: JarvisProposedAction | null;
+  navigate_to?: string | null;
   error?: string;
 }
