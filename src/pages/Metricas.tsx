@@ -72,17 +72,15 @@ export default function Metricas() {
   const igReproduccionesProm = report ? average(report.social.publicaciones.map((p) => p.reproducciones)) : null;
   const igEngProm = report ? average(report.social.publicaciones.map((p) => p.engagement_rate_sobre_alcance_pct)) : null;
 
-  const igSparkline = report ? report.social.snapshots.filter((s) => s.seguidores !== null).map((s) => ({ fecha: s.fecha, valor: s.seguidores as number })) : [];
-  const fbSparkline = report ? report.facebook.snapshots.filter((s) => s.seguidores !== null).map((s) => ({ fecha: s.fecha, valor: s.seguidores as number })) : [];
+  const igSparkline = report ? report.social.snapshots.map((s) => ({ fecha: s.fecha, valor: s.seguidores })) : [];
+  const fbSparkline = report ? report.facebook.snapshots.map((s) => ({ fecha: s.fecha, valor: s.seguidores })) : [];
   const fbVisualizacionesSparkline = report
-    ? report.facebook.visualizaciones_snapshots.filter((s) => s.visualizaciones !== null).map((s) => ({ fecha: s.fecha, valor: s.visualizaciones as number }))
+    ? report.facebook.visualizaciones_snapshots.map((s) => ({ fecha: s.fecha, valor: s.visualizaciones }))
     : [];
-  const ytSparkline = report ? report.youtube.snapshots.filter((s) => s.suscriptores !== null).map((s) => ({ fecha: s.fecha, valor: s.suscriptores as number })) : [];
+  const ytSparkline = report ? report.youtube.snapshots.map((s) => ({ fecha: s.fecha, valor: s.suscriptores })) : [];
   const seoSparkline = report ? report.seo.clicks_snapshots.map((s) => ({ fecha: s.fecha, valor: s.clics })) : [];
   const seoImpresionesSparkline = report ? report.seo.impressions_snapshots.map((s) => ({ fecha: s.fecha, valor: s.impresiones })) : [];
-  const seoPosicionSparkline = report
-    ? report.seo.snapshots.filter((s) => s.posicion !== null).map((s) => ({ fecha: s.fecha, valor: s.posicion as number }))
-    : [];
+  const seoPosicionSparkline = report ? report.seo.snapshots.map((s) => ({ fecha: s.fecha, valor: s.posicion })) : [];
 
   const igPostBars = report
     ? report.social.publicaciones
@@ -167,9 +165,9 @@ export default function Metricas() {
                       <span className="chart-card-stat-value tabular">{igEngProm !== null ? `${igEngProm}%` : '—'}</span>
                     </div>
                   </div>
-                  <TrendChart points={igSparkline} color="var(--plum)" formatDate={(f) => formatWhen(f).slice(0, 5)} />
+                  <TrendChart points={igSparkline} formatDate={(f) => formatWhen(f).slice(0, 5)} />
                   <div className="chart-card-subtitle">Visualizaciones por publicación</div>
-                  <BarChart bars={igPostBars} color="var(--plum)" />
+                  <BarChart bars={igPostBars} />
                 </div>
               </Reveal>
               <Reveal delay={60}>
@@ -183,11 +181,11 @@ export default function Metricas() {
                     <span className="card2-value-unit">seguidores</span>
                   </div>
                   <div className="card2-delta-label">{report.facebook.nombre_pagina ?? 'Sin datos todavía'}</div>
-                  <TrendChart points={fbSparkline} color="#1877F2" formatDate={(f) => formatWhen(f).slice(0, 5)} />
+                  <TrendChart points={fbSparkline} formatDate={(f) => formatWhen(f).slice(0, 5)} />
                   <div className="chart-card-subtitle">
                     Visualizaciones de Página{report.facebook.visualizaciones_actual !== null ? ` · ${report.facebook.visualizaciones_actual.toLocaleString('es-CL')} hoy` : ''}
                   </div>
-                  <TrendChart points={fbVisualizacionesSparkline} color="#1877F2" formatDate={(f) => formatWhen(f).slice(0, 5)} />
+                  <TrendChart points={fbVisualizacionesSparkline} formatDate={(f) => formatWhen(f).slice(0, 5)} />
                 </div>
               </Reveal>
               <Reveal delay={120}>
@@ -216,7 +214,7 @@ export default function Metricas() {
                       <span className="chart-card-stat-value tabular chart-card-stat-nodata">Sin datos</span>
                     </div>
                   </div>
-                  <TrendChart points={ytSparkline} color="var(--youtube-red)" formatDate={(f) => formatWhen(f).slice(0, 5)} />
+                  <TrendChart points={ytSparkline} formatDate={(f) => formatWhen(f).slice(0, 5)} />
                 </div>
               </Reveal>
             </div>
@@ -234,7 +232,7 @@ export default function Metricas() {
                   <div className="card2-value-row">
                     <span className="card2-value-xl tabular">{report.seo.clics_organicos_actual !== null ? report.seo.clics_organicos_actual.toLocaleString('es-CL') : '—'}</span>
                   </div>
-                  <TrendChart points={seoSparkline} color="var(--ok)" formatDate={(f) => formatWhen(f).slice(0, 5)} />
+                  <TrendChart points={seoSparkline} formatDate={(f) => formatWhen(f).slice(0, 5)} />
                   <div className="seo-top-counts">
                     <div>
                       <span className="tabular">{top3}</span>
@@ -260,7 +258,7 @@ export default function Metricas() {
                   <div className="card2-value-row">
                     <span className="card2-value-xl tabular">{report.seo.posicion_actual ?? '—'}</span>
                   </div>
-                  <TrendChart points={seoPosicionSparkline} color="var(--warn)" formatDate={(f) => formatWhen(f).slice(0, 5)} />
+                  <TrendChart points={seoPosicionSparkline} formatDate={(f) => formatWhen(f).slice(0, 5)} />
                 </div>
               </Reveal>
               <Reveal delay={120}>
@@ -273,7 +271,7 @@ export default function Metricas() {
                       {seoImpresionesSparkline.length ? seoImpresionesSparkline[seoImpresionesSparkline.length - 1].valor.toLocaleString('es-CL') : '—'}
                     </span>
                   </div>
-                  <TrendChart points={seoImpresionesSparkline} color="var(--plum)" formatDate={(f) => formatWhen(f).slice(0, 5)} />
+                  <TrendChart points={seoImpresionesSparkline} formatDate={(f) => formatWhen(f).slice(0, 5)} />
                 </div>
               </Reveal>
               <Reveal delay={180}>

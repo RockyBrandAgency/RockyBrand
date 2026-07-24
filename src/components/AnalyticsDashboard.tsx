@@ -1,30 +1,7 @@
 import { useEffect, useState } from 'react';
 import { usePanelData } from '../context/PanelDataContext';
 import type { MetricsReport } from '../types';
-
-function Sparkline({ points, color }: { points: { fecha: string; value: number | null }[]; color: string }) {
-  const valid = points.filter((p) => p.value != null) as { fecha: string; value: number }[];
-  if (valid.length < 2) {
-    return <div className="empty-state" style={{ padding: '18px 0' }}>Necesita al menos 2 snapshots para mostrar tendencia.</div>;
-  }
-  const width = 100;
-  const height = 32;
-  const values = valid.map((p) => p.value);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-  const step = width / (valid.length - 1);
-  const coords = valid.map((p, i) => {
-    const x = i * step;
-    const y = height - ((p.value - min) / range) * height;
-    return `${x},${y}`;
-  });
-  return (
-    <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" style={{ width: '100%', height: 48 }}>
-      <polyline points={coords.join(' ')} fill="none" stroke={color} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-    </svg>
-  );
-}
+import TrendChart from './TrendChart';
 
 function SourceRow({ name, connected, detail }: { name: string; connected: boolean; detail: string }) {
   return (
@@ -101,14 +78,14 @@ export default function AnalyticsDashboard() {
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 14 }}>
-        <div className="card">
-          <div className="mini-card-label" style={{ marginBottom: 8 }}>Seguidores Instagram</div>
-          <Sparkline points={report.social.snapshots.map((s) => ({ fecha: s.fecha, value: s.seguidores }))} color="var(--sage)" />
+      <div className="chart-card-grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))' }}>
+        <div className="card2 chart-card">
+          <div className="chart-card-title">Seguidores Instagram</div>
+          <TrendChart points={report.social.snapshots.map((s) => ({ fecha: s.fecha, valor: s.seguidores }))} />
         </div>
-        <div className="card">
-          <div className="mini-card-label" style={{ marginBottom: 8 }}>Suscriptores YouTube</div>
-          <Sparkline points={report.youtube.snapshots.map((s) => ({ fecha: s.fecha, value: s.suscriptores }))} color="var(--youtube-red)" />
+        <div className="card2 chart-card">
+          <div className="chart-card-title">Suscriptores YouTube</div>
+          <TrendChart points={report.youtube.snapshots.map((s) => ({ fecha: s.fecha, valor: s.suscriptores }))} />
         </div>
       </div>
 
