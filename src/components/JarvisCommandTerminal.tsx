@@ -6,13 +6,20 @@
 // Regla de fase 1: "Aprobar" una proposed_action NUNCA llama a un endpoint
 // real - solo cambia el estado local del mensaje con un label explicito de
 // modo de prueba, para no insinuar que algo se ejecuto quedeveras.
+//
+// Voz: entrada via Web Speech API nativa del navegador (gratis, sin backend).
+// Salida via ElevenLabs real (jarvis_speak en el backend, reusa el mismo
+// modulo que ya usa el agente Filmmaker) - si la voz todavia no esta
+// configurada en SSM, se muestra el motivo real en vez de fallar en silencio
+// o fabricar audio.
 import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
-import { invokeJarvis } from '../api';
+import { invokeJarvis, speakJarvis } from '../api';
 import { usePanelData } from '../context/PanelDataContext';
 import type { JarvisProposedAction } from '../types';
 
 type MessageStatus = 'idle' | 'approved' | 'rejected';
+type VoiceState = 'idle' | 'loading' | 'error';
 
 interface JarvisMessage {
   id: string;
@@ -20,6 +27,8 @@ interface JarvisMessage {
   text: string;
   proposedAction?: JarvisProposedAction | null;
   actionStatus?: MessageStatus;
+  voiceState?: VoiceState;
+  voiceError?: string;
 }
 
 let messageSeq = 0;
@@ -28,16 +37,47 @@ function nextId(): string {
   return `jarvis-msg-${messageSeq}`;
 }
 
+interface SpeechRecognitionEventLike {
+  results: { [index: number]: { [index: number]: { transcript: string }; isFinal: boolean } };
+  resultIndex: number;
+}
+interface SpeechRecognitionInstance {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+}
+declare global {
+  interface Window {
+    SpeechRecognition?: new () => SpeechRecognitionInstance;
+    webkitSpeechRecognition?: new () => SpeechRecognitionInstance;
+  }
+}
+
+function getSpeechRecognitionCtor(): (new () => SpeechRecognitionInstance) | null {
+  if (typeof window === 'undefined') return null;
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+
 export default function JarvisCommandTerminal() {
   const { activeProjectId, activeProjectName } = usePanelData();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<JarvisMessage[]>([]);
   const [input, setInput] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [voiceOutputEnabled, setVoiceOutputEnabled] = useState(true);
 
   const panelRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const speechSupported = getSpeechRecognitionCtor() !== null;
 
   useEffect(() => {
     function handleKeydown(e: KeyboardEvent) {
@@ -64,11 +104,34 @@ export default function JarvisCommandTerminal() {
     return () => ctx.revert();
   }, [open]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const prompt = input.trim();
-    if (!prompt || !activeProjectId || processing) return;
-    setInput('');
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop();
+      audioRef.current?.pause();
+    };
+  }, []);
+
+  async function playJarvisReply(messageId: string, text: string) {
+    if (!voiceOutputEnabled || !text.trim()) return;
+    setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, voiceState: 'loading' } : m)));
+    try {
+      const result = await speakJarvis(text);
+      if (!result.ok || !result.audio_base64) {
+        setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, voiceState: 'error', voiceError: result.error || 'Voz no disponible.' } : m)));
+        return;
+      }
+      audioRef.current?.pause();
+      const audio = new Audio(`data:audio/mpeg;base64,${result.audio_base64}`);
+      audioRef.current = audio;
+      setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, voiceState: 'idle' } : m)));
+      await audio.play();
+    } catch (err) {
+      setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, voiceState: 'error', voiceError: err instanceof Error ? err.message : 'Voz no disponible.' } : m)));
+    }
+  }
+
+  async function sendPrompt(prompt: string) {
+    if (!prompt.trim() || !activeProjectId || processing) return;
     setMessages((prev) => [...prev, { id: nextId(), role: 'user', text: prompt }]);
     setProcessing(true);
     try {
@@ -76,22 +139,63 @@ export default function JarvisCommandTerminal() {
       if (!result.ok) {
         setMessages((prev) => [...prev, { id: nextId(), role: 'error', text: result.error || 'Jarvis no pudo responder.' }]);
       } else {
+        const msgId = nextId();
         setMessages((prev) => [
           ...prev,
           {
-            id: nextId(),
+            id: msgId,
             role: 'jarvis',
             text: result.reply || '',
             proposedAction: result.proposed_action,
             actionStatus: result.proposed_action ? 'idle' : undefined,
           },
         ]);
+        if (result.reply) void playJarvisReply(msgId, result.reply);
       }
     } catch (err) {
       setMessages((prev) => [...prev, { id: nextId(), role: 'error', text: err instanceof Error ? err.message : 'Error de conexión.' }]);
     } finally {
       setProcessing(false);
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const prompt = input.trim();
+    setInput('');
+    await sendPrompt(prompt);
+  }
+
+  function toggleListening() {
+    if (listening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    const Ctor = getSpeechRecognitionCtor();
+    if (!Ctor || !activeProjectId) return;
+    const recognition = new Ctor();
+    recognition.lang = 'es-CL';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.onresult = (event) => {
+      let finalTranscript = '';
+      let interimTranscript = '';
+      for (let i = event.resultIndex; event.results[i]; i++) {
+        const result = event.results[i];
+        if (result.isFinal) finalTranscript += result[0].transcript;
+        else interimTranscript += result[0].transcript;
+      }
+      setInput(finalTranscript || interimTranscript);
+      if (finalTranscript.trim()) {
+        setInput('');
+        void sendPrompt(finalTranscript.trim());
+      }
+    };
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => setListening(false);
+    recognitionRef.current = recognition;
+    setListening(true);
+    recognition.start();
   }
 
   function setActionStatus(messageId: string, status: MessageStatus) {
@@ -125,7 +229,17 @@ export default function JarvisCommandTerminal() {
                   {activeProjectName ? `Contexto: ${activeProjectName}` : 'Sin cliente activo'}
                 </div>
               </div>
-              <button type="button" className="jarvis-close" onClick={() => setOpen(false)}>&times;</button>
+              <div className="jarvis-panel-head-actions">
+                <button
+                  type="button"
+                  className={`jarvis-voice-toggle${voiceOutputEnabled ? ' active' : ''}`}
+                  onClick={() => setVoiceOutputEnabled((v) => !v)}
+                  title={voiceOutputEnabled ? 'Silenciar voz de Jarvis' : 'Activar voz de Jarvis'}
+                >
+                  {voiceOutputEnabled ? '🔊' : '🔇'}
+                </button>
+                <button type="button" className="jarvis-close" onClick={() => setOpen(false)}>&times;</button>
+              </div>
             </div>
 
             <div className="jarvis-history">
@@ -135,6 +249,12 @@ export default function JarvisCommandTerminal() {
               {messages.map((m) => (
                 <div key={m.id} className={`jarvis-msg jarvis-msg--${m.role}`}>
                   <div className="jarvis-msg-text">{m.text}</div>
+                  {m.role === 'jarvis' && m.voiceState === 'loading' && (
+                    <div className="jarvis-voice-status">🔊 generando audio…</div>
+                  )}
+                  {m.role === 'jarvis' && m.voiceState === 'error' && (
+                    <div className="jarvis-voice-status jarvis-voice-status--error">🔇 voz no disponible: {m.voiceError}</div>
+                  )}
                   {m.proposedAction && (
                     <div className="jarvis-action-block">
                       <div className="jarvis-action-kind">Acción propuesta · {m.proposedAction.kind}</div>
@@ -164,13 +284,30 @@ export default function JarvisCommandTerminal() {
             </div>
 
             <form className="jarvis-input-row" onSubmit={handleSubmit}>
+              {speechSupported && (
+                <button
+                  type="button"
+                  className={`jarvis-mic${listening ? ' listening' : ''}`}
+                  onClick={toggleListening}
+                  disabled={!activeProjectId || processing}
+                  title={listening ? 'Escuchando… click para detener' : 'Hablarle a Jarvis'}
+                >
+                  {listening ? '● ' : '🎙'}
+                </button>
+              )}
               <input
                 ref={inputRef}
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 disabled={!activeProjectId || processing}
-                placeholder={activeProjectId ? 'Preguntale algo a Jarvis…' : 'Elegí un cliente activo primero'}
+                placeholder={
+                  !activeProjectId
+                    ? 'Elegí un cliente activo primero'
+                    : listening
+                    ? 'Escuchando…'
+                    : 'Preguntale algo a Jarvis…'
+                }
               />
               <button type="submit" disabled={!activeProjectId || processing || !input.trim()}>
                 Enviar

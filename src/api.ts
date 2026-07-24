@@ -77,6 +77,10 @@ export function invokeJarvis(prompt: string, projectId: string) {
   return callAction<JarvisResponse>('invoke_jarvis', { prompt, project_id: projectId });
 }
 
+export function speakJarvis(text: string) {
+  return callAction<{ ok: boolean; audio_base64?: string; duration_seconds?: number; error?: string }>('jarvis_speak', { text });
+}
+
 export function formatWhen(iso?: string): string {
   if (!iso) return '';
   try {
