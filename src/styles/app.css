@@ -545,6 +545,7 @@ tbody tr:hover{ background:rgba(255,255,255,0.02); }
 .chart-card-stat-label{ font-size:11px; color:var(--card2-label); }
 .chart-card-stat-value{ font-size:18px; font-weight:800; color:var(--card2-value); }
 .chart-card-stat-nodata{ font-size:12px; color:var(--card2-label); font-weight:500; font-style:italic; }
+.chart-card-subtitle{ font-size:11px; font-weight:700; color:var(--card2-label); text-transform:uppercase; letter-spacing:0.04em; margin-top:44px; margin-bottom:4px; }
 
 .seo-section-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:22px; align-items:start; }
 .seo-top-counts{ display:flex; gap:12px; margin-top:44px; }
@@ -554,7 +555,7 @@ tbody tr:hover{ background:rgba(255,255,255,0.02); }
 
 /* ===== KeywordMatrix ===== */
 .keyword-matrix{ margin-top:4px; }
-.keyword-matrix-head, .keyword-matrix-row{ display:grid; grid-template-columns:2fr 0.7fr 0.7fr 0.9fr 1.3fr; gap:8px; align-items:center; padding:9px 0; }
+.keyword-matrix-head, .keyword-matrix-row{ display:grid; grid-template-columns:1.8fr 0.6fr 0.6fr 0.8fr 1.4fr 1.1fr; gap:8px; align-items:center; padding:9px 0; }
 .keyword-matrix-head{ font-size:10px; color:var(--card2-label); text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid var(--card2-border); padding-bottom:10px; }
 .keyword-matrix-row{ font-size:12px; color:var(--card2-value-dim); border-bottom:1px solid rgba(255,255,255,0.04); }
 .keyword-matrix-row:last-child{ border-bottom:none; }
@@ -567,6 +568,9 @@ tbody tr:hover{ background:rgba(255,255,255,0.02); }
 .keyword-matrix-delta-down{ color:var(--bad); }
 .keyword-matrix-delta-neutral{ color:var(--card2-label); }
 .keyword-matrix-fecha{ font-size:10.5px; color:var(--card2-label); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.keyword-matrix-landing{ font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.keyword-matrix-landing a{ color:var(--accent, #9b8cff); text-decoration:none; }
+.keyword-matrix-landing a:hover{ text-decoration:underline; }
 
 @media (max-width: 1100px){
   .card2-grid-3, .card2-grid-2, .chart-card-grid, .seo-section-grid{ grid-template-columns:1fr; }

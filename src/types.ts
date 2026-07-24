@@ -198,7 +198,6 @@ export interface MetricsSocialPost {
   likes: number;
   comentarios: number;
   alcance: number;
-  impresiones: number | null;
   reproducciones: number | null;
   engagement_rate_sobre_alcance_pct: number | null;
 }
@@ -210,6 +209,7 @@ export interface KeywordMatrixRow {
   delta: number | null;
   impresiones: number | null;
   periodo: string | null;
+  landing_page: string | null;
 }
 
 export interface MetricsSeoSnapshot {
@@ -244,6 +244,7 @@ export interface MetricsReport {
     snapshots: { fecha: string; seguidores: number | null }[];
     seguidores_actuales: number | null;
     cambio_neto_periodo: number;
+    cambio_neto_7d: number;
     engagement_promedio_pct: number | null;
     publicaciones: MetricsSocialPost[];
   };
@@ -251,12 +252,15 @@ export interface MetricsReport {
     snapshots: { fecha: string; seguidores: number | null }[];
     seguidores_actuales: number | null;
     nombre_pagina: string | null;
+    visualizaciones_actual: number | null;
+    visualizaciones_snapshots: { fecha: string; visualizaciones: number | null }[];
   };
   youtube: {
     snapshots: { fecha: string; suscriptores: number | null }[];
     suscriptores_actuales: number | null;
     suscriptores_ganados_periodo: number;
     suscriptores_perdidos_periodo: number;
+    suscriptores_netos_7d: number;
     vistas_periodo: number;
     minutos_vistos_periodo: number | null;
     duracion_promedio_vista_seg: number | null;
@@ -269,6 +273,7 @@ export interface MetricsReport {
     keyword: string | null;
     keyword_matrix: KeywordMatrixRow[];
     clicks_snapshots: { fecha: string; clics: number }[];
+    impressions_snapshots: { fecha: string; impresiones: number }[];
     clics_organicos_actual: number | null;
   };
   content: { count: number; piezas: MetricsContentPiece[] };

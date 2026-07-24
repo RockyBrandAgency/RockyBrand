@@ -7,6 +7,7 @@ import type { MetricsReport } from '../types';
 import Reveal from '../components/Reveal';
 import KpiStrip from '../components/KpiStrip';
 import TrendChart from '../components/TrendChart';
+import BarChart from '../components/BarChart';
 import KeywordMatrix from '../components/KeywordMatrix';
 
 const RANGE_OPTIONS = [
@@ -68,13 +69,26 @@ export default function Metricas() {
   const top20 = report ? igPosiciones.filter((p) => p <= 20).length : 0;
 
   const igAlcanceProm = report ? average(report.social.publicaciones.map((p) => p.alcance)) : null;
-  const igImpresionesProm = report ? average(report.social.publicaciones.map((p) => p.impresiones)) : null;
+  const igReproduccionesProm = report ? average(report.social.publicaciones.map((p) => p.reproducciones)) : null;
   const igEngProm = report ? average(report.social.publicaciones.map((p) => p.engagement_rate_sobre_alcance_pct)) : null;
 
   const igSparkline = report ? report.social.snapshots.filter((s) => s.seguidores !== null).map((s) => ({ fecha: s.fecha, valor: s.seguidores as number })) : [];
   const fbSparkline = report ? report.facebook.snapshots.filter((s) => s.seguidores !== null).map((s) => ({ fecha: s.fecha, valor: s.seguidores as number })) : [];
+  const fbVisualizacionesSparkline = report
+    ? report.facebook.visualizaciones_snapshots.filter((s) => s.visualizaciones !== null).map((s) => ({ fecha: s.fecha, valor: s.visualizaciones as number }))
+    : [];
   const ytSparkline = report ? report.youtube.snapshots.filter((s) => s.suscriptores !== null).map((s) => ({ fecha: s.fecha, valor: s.suscriptores as number })) : [];
   const seoSparkline = report ? report.seo.clicks_snapshots.map((s) => ({ fecha: s.fecha, valor: s.clics })) : [];
+  const seoImpresionesSparkline = report ? report.seo.impressions_snapshots.map((s) => ({ fecha: s.fecha, valor: s.impresiones })) : [];
+  const seoPosicionSparkline = report
+    ? report.seo.snapshots.filter((s) => s.posicion !== null).map((s) => ({ fecha: s.fecha, valor: s.posicion as number }))
+    : [];
+
+  const igPostBars = report
+    ? report.social.publicaciones
+        .filter((p) => p.reproducciones !== null)
+        .map((p) => ({ label: formatWhen(p.fecha), valor: p.reproducciones as number }))
+    : [];
 
   const watchTimeHoras = report && report.youtube.minutos_vistos_periodo != null ? Math.round((report.youtube.minutos_vistos_periodo / 60) * 10) / 10 : null;
 
@@ -112,8 +126,9 @@ export default function Metricas() {
             <KpiStrip
               items={[
                 { label: 'Campañas email', value: report.email.campaigns.length, sub: openRate !== null ? `${openRate}% apertura prom.` : undefined },
-                { label: 'Seguidores IG neto', value: report.social.cambio_neto_periodo, signed: true },
-                { label: 'Suscriptores YT neto', value: report.youtube.suscriptores_ganados_periodo - report.youtube.suscriptores_perdidos_periodo, signed: true },
+                { label: 'Seguidores Instagram', value: report.social.seguidores_actuales ?? '—' },
+                { label: 'Cambio neto IG · 7 días', value: report.social.cambio_neto_7d, signed: true },
+                { label: 'Suscriptores YT · 7 días', value: report.youtube.suscriptores_netos_7d, signed: true },
                 {
                   label: 'Posición SEO media',
                   value: posicionMedia ?? '—',
@@ -137,15 +152,15 @@ export default function Metricas() {
                   <div className="chart-card-stats">
                     <div>
                       <span className="chart-card-stat-label">Seguidores</span>
-                      <span className="chart-card-stat-value tabular">{report.social.seguidores_actuales ?? '—'}</span>
+                      <span className="chart-card-stat-value tabular">{report.social.seguidores_actuales !== null ? report.social.seguidores_actuales.toLocaleString('es-CL') : '—'}</span>
                     </div>
                     <div>
                       <span className="chart-card-stat-label">Alcance prom.</span>
-                      <span className="chart-card-stat-value tabular">{igAlcanceProm ?? '—'}</span>
+                      <span className="chart-card-stat-value tabular">{igAlcanceProm !== null ? igAlcanceProm.toLocaleString('es-CL') : '—'}</span>
                     </div>
                     <div>
-                      <span className="chart-card-stat-label">Impresiones</span>
-                      <span className="chart-card-stat-value tabular">{igImpresionesProm ?? '—'}</span>
+                      <span className="chart-card-stat-label">Visualizaciones prom.</span>
+                      <span className="chart-card-stat-value tabular">{igReproduccionesProm !== null ? igReproduccionesProm.toLocaleString('es-CL') : '—'}</span>
                     </div>
                     <div>
                       <span className="chart-card-stat-label">Eng. Rate</span>
@@ -153,6 +168,8 @@ export default function Metricas() {
                     </div>
                   </div>
                   <TrendChart points={igSparkline} color="var(--plum)" formatDate={(f) => formatWhen(f).slice(0, 5)} />
+                  <div className="chart-card-subtitle">Visualizaciones por publicación</div>
+                  <BarChart bars={igPostBars} color="var(--plum)" />
                 </div>
               </Reveal>
               <Reveal delay={60}>
@@ -162,11 +179,15 @@ export default function Metricas() {
                     <span className="chart-card-range">últimos {days} días</span>
                   </div>
                   <div className="card2-value-row" style={{ marginTop: 18 }}>
-                    <span className="card2-value-xl tabular">{report.facebook.seguidores_actuales ?? '—'}</span>
+                    <span className="card2-value-xl tabular">{report.facebook.seguidores_actuales !== null ? report.facebook.seguidores_actuales.toLocaleString('es-CL') : '—'}</span>
                     <span className="card2-value-unit">seguidores</span>
                   </div>
                   <div className="card2-delta-label">{report.facebook.nombre_pagina ?? 'Sin datos todavía'}</div>
                   <TrendChart points={fbSparkline} color="#1877F2" formatDate={(f) => formatWhen(f).slice(0, 5)} />
+                  <div className="chart-card-subtitle">
+                    Visualizaciones de Página{report.facebook.visualizaciones_actual !== null ? ` · ${report.facebook.visualizaciones_actual.toLocaleString('es-CL')} hoy` : ''}
+                  </div>
+                  <TrendChart points={fbVisualizacionesSparkline} color="#1877F2" formatDate={(f) => formatWhen(f).slice(0, 5)} />
                 </div>
               </Reveal>
               <Reveal delay={120}>
@@ -178,11 +199,11 @@ export default function Metricas() {
                   <div className="chart-card-stats">
                     <div>
                       <span className="chart-card-stat-label">Suscriptores</span>
-                      <span className="chart-card-stat-value tabular">{report.youtube.suscriptores_actuales ?? '—'}</span>
+                      <span className="chart-card-stat-value tabular">{report.youtube.suscriptores_actuales !== null ? report.youtube.suscriptores_actuales.toLocaleString('es-CL') : '—'}</span>
                     </div>
                     <div>
                       <span className="chart-card-stat-label">Visualizaciones</span>
-                      <span className="chart-card-stat-value tabular">{report.youtube.vistas_periodo}</span>
+                      <span className="chart-card-stat-value tabular">{report.youtube.vistas_periodo.toLocaleString('es-CL')}</span>
                     </div>
                     <div>
                       <span className="chart-card-stat-label">Watch Time</span>
@@ -211,7 +232,7 @@ export default function Metricas() {
                     <span className="chart-card-title">Clics orgánicos</span>
                   </div>
                   <div className="card2-value-row">
-                    <span className="card2-value-xl tabular">{report.seo.clics_organicos_actual ?? '—'}</span>
+                    <span className="card2-value-xl tabular">{report.seo.clics_organicos_actual !== null ? report.seo.clics_organicos_actual.toLocaleString('es-CL') : '—'}</span>
                   </div>
                   <TrendChart points={seoSparkline} color="var(--ok)" formatDate={(f) => formatWhen(f).slice(0, 5)} />
                   <div className="seo-top-counts">
@@ -231,6 +252,31 @@ export default function Metricas() {
                 </div>
               </Reveal>
               <Reveal delay={60}>
+                <div className="card2 chart-card">
+                  <div className="chart-card-head">
+                    <span className="chart-card-title">Posición promedio</span>
+                    <span className="chart-card-range">menor es mejor</span>
+                  </div>
+                  <div className="card2-value-row">
+                    <span className="card2-value-xl tabular">{report.seo.posicion_actual ?? '—'}</span>
+                  </div>
+                  <TrendChart points={seoPosicionSparkline} color="var(--warn)" formatDate={(f) => formatWhen(f).slice(0, 5)} />
+                </div>
+              </Reveal>
+              <Reveal delay={120}>
+                <div className="card2 chart-card">
+                  <div className="chart-card-head">
+                    <span className="chart-card-title">Impresiones de búsqueda</span>
+                  </div>
+                  <div className="card2-value-row">
+                    <span className="card2-value-xl tabular">
+                      {seoImpresionesSparkline.length ? seoImpresionesSparkline[seoImpresionesSparkline.length - 1].valor.toLocaleString('es-CL') : '—'}
+                    </span>
+                  </div>
+                  <TrendChart points={seoImpresionesSparkline} color="var(--plum)" formatDate={(f) => formatWhen(f).slice(0, 5)} />
+                </div>
+              </Reveal>
+              <Reveal delay={180}>
                 <div className="card2">
                   <div className="chart-card-head">
                     <span className="chart-card-title">Matriz de Keywords</span>
