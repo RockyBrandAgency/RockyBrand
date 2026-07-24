@@ -1,3 +1,5 @@
+import type { JarvisResponse } from './types';
+
 const CONFIG_API_URL = 'https://1gfa1uwd8i.execute-api.us-east-2.amazonaws.com/config';
 const TOKEN_STORAGE_KEY = 'rockyaiPanelToken';
 
@@ -69,6 +71,10 @@ export async function callAction<T = unknown>(action: string, extra?: Record<str
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data as { error?: string }).error || 'Error de conexión');
   return data as T;
+}
+
+export function invokeJarvis(prompt: string, projectId: string) {
+  return callAction<JarvisResponse>('invoke_jarvis', { prompt, project_id: projectId });
 }
 
 export function formatWhen(iso?: string): string {
