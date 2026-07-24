@@ -10,10 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@remotion/player": "^4.0.498",
     "gsap": "^3.15.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-router-dom": "^6.28.0"
+    "react-router-dom": "^6.28.0",
+    "remotion": "^4.0.498"
   },
   "devDependencies": {
     "@types/node": "^24.13.2",
