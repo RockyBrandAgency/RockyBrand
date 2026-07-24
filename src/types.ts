@@ -381,17 +381,3 @@ export interface PmsItinerary {
   bookings: PmsBooking[];
   experiences: PmsAddon[];
 }
-
-export interface JarvisProposedAction {
-  kind: string;
-  summary: string;
-  details: string;
-}
-
-export interface JarvisResponse {
-  ok: boolean;
-  reply?: string;
-  proposed_action?: JarvisProposedAction | null;
-  navigate_to?: string | null;
-  error?: string;
-}
