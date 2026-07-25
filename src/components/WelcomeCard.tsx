@@ -59,7 +59,7 @@ export default function WelcomeCard() {
   return (
     <div className="welcome-wrap">
       <div className="welcome-content">
-        <img className="welcome-logo" src="/rocky-brand-white.png" alt="RockyAI" />
+        <img className="welcome-logo" src="/rocky-brand-white.png" alt="RockyBrand" />
         <h1 className="welcome-title">AI Powered Brand &amp; Execution</h1>
         <ul className="welcome-list">
           <li>

@@ -44,7 +44,7 @@ export default function Sidebar() {
   return (
     <div className="sidebar">
       <div className="logo-row" onClick={() => navigate('/')} role="button" tabIndex={0} style={{ cursor: 'pointer' }}>
-        <img className="logo-image" src="/rocky-brand-logo.png" alt="RockyAI" />
+        <img className="logo-image" src="/rocky-brand-logo.png" alt="RockyBrand" />
         <div className="logo-tagline">AI Powered Brand &amp; Execution</div>
       </div>
 

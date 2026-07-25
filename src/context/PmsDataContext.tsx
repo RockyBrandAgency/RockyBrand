@@ -18,7 +18,7 @@ interface PmsDataValue {
 
 const PmsDataContext = createContext<PmsDataValue | null>(null);
 
-const LODGE_STORAGE_KEY = 'rockyaiPmsLodge';
+const LODGE_STORAGE_KEY = 'rockybrandPmsLodge';
 const DEFAULT_LODGE = 'alto-castillo';
 
 export function PmsDataProvider({ children }: { children: ReactNode }) {

@@ -24,7 +24,7 @@ export default function Login() {
   return (
     <div className="login-overlay">
       <form className="login-box" onSubmit={handleSubmit}>
-        <div className="login-title">RockyAI</div>
+        <div className="login-title">RockyBrand</div>
         <div className="login-sub">Acceso administrador</div>
         <div className="login-field">
           <label className="login-label" htmlFor="login-username">Usuario</label>

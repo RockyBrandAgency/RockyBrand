@@ -1,5 +1,5 @@
 const CONFIG_API_URL = 'https://1gfa1uwd8i.execute-api.us-east-2.amazonaws.com/config';
-const TOKEN_STORAGE_KEY = 'rockyaiPanelToken';
+const TOKEN_STORAGE_KEY = 'rockybrandPanelToken';
 
 export function getStoredToken(): string | null {
   const token = localStorage.getItem(TOKEN_STORAGE_KEY);
