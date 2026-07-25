@@ -240,7 +240,7 @@
 .agent-card:hover{ border-color:var(--accent); box-shadow:0 8px 28px rgba(0,0,0,0.35); transform:translateY(-2px); }
 .agent-top{ display:flex; align-items:center; gap:14px; }
 .avatar{ width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; color:#14161a; position:relative; flex-shrink:0; }
-.avatar.ad{ background-color:var(--moss); } .avatar.an{ background-color:var(--dust); } .avatar.seo{ background-color:var(--ochre); } .avatar.strategist{ background-color:var(--sage); } .avatar.fm{ background-color:var(--plum); } .avatar.ri{ background-color:var(--indigo); }
+.avatar.ad{ background-color:var(--moss); } .avatar.an{ background-color:var(--dust); } .avatar.seo{ background-color:var(--ochre); } .avatar.strategist{ background-color:var(--sage); } .avatar.fm{ background-color:var(--plum); } .avatar.ri{ background-color:var(--indigo); } .avatar.cmo{ background-color:var(--accent); }
 .avatar-ring{ position:absolute; inset:-4px; border-radius:50%; border:1.5px solid var(--dim-2); }
 .name-fixed{ font-size:17px; font-weight:800; letter-spacing:-0.005em; }
 .role-fixed{ font-size:11.5px; color:var(--dim-2); margin-top:3px; font-weight:500; }

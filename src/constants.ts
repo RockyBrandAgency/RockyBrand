@@ -31,6 +31,11 @@ export const DEFAULTS: Record<AgentKey, AgentConfig> = {
     desc: 'Market Research & Insight Scout. El Periodista de Gira de la Banda. Se infiltra en Reddit, foros y revistas del mercado objetivo para traer fricciones, deseos y oportunidades reales de usuarios — materia prima cruda para que Dave componga con datos, no con suposiciones.',
     avatarUrl: '',
   },
+  cmo: {
+    name: 'Rox',
+    desc: 'Chief Marketing Officer. El Manager de la Banda. No toca ningún instrumento: define el norte de marca y emite directivas obligatorias de canal/KPI/acción para que Dave, Jimi, Cameron, Thelma y Slash toquen la misma canción.',
+    avatarUrl: '',
+  },
 };
 
 export const AGENT_META: Record<AgentKey, { cls: string; initials: string; role: string; short: string }> = {
@@ -40,9 +45,10 @@ export const AGENT_META: Record<AgentKey, { cls: string; initials: string; role:
   strategist: { cls: 'strategist', initials: 'DA', role: 'Content & Social Media Strategist', short: 'Content Strategist' },
   fm: { cls: 'fm', initials: 'TH', role: 'Director de Montaje y Edición Cinematográfica', short: 'Filmmaker' },
   ri: { cls: 'ri', initials: 'CA', role: 'Market Research & Insight Scout', short: 'Research' },
+  cmo: { cls: 'cmo', initials: 'RX', role: 'Chief Marketing Officer', short: 'CMO' },
 };
 
-export const AGENT_FUNCTION_KEYS: AgentKey[] = ['ad', 'an', 'seo', 'strategist', 'fm', 'ri'];
+export const AGENT_FUNCTION_KEYS: AgentKey[] = ['ad', 'an', 'seo', 'strategist', 'fm', 'ri', 'cmo'];
 
 export const TOOL_META: Record<ToolKey, { label: string; icon: string }> = {
   agentes: { label: 'Agentes', icon: '◈' },

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePanelData } from '../context/PanelDataContext';
 import { AGENT_META, AGENT_FUNCTION_KEYS, DEFAULTS, TOOL_KEYS, statusMeta } from '../constants';
@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import ContentCalendar from '../components/ContentCalendar';
 import AnalyticsDashboard from '../components/AnalyticsDashboard';
 import TimelineResultModal from '../components/TimelineResultModal';
-import type { AgentKey, AgentPromptState, TimelineEntry } from '../types';
+import type { AgentKey, TimelineEntry } from '../types';
 
 function formatTokens(status: { tokens_input_total?: number; tokens_output_total?: number; tokens_thinking_total?: number } | undefined): string {
   const total = (status?.tokens_input_total || 0) + (status?.tokens_output_total || 0) + (status?.tokens_thinking_total || 0);
@@ -38,12 +38,6 @@ export default function AgentDetail() {
   const [openResult, setOpenResult] = useState<Record<string, unknown> | null>(null);
   const [pauseBusy, setPauseBusy] = useState(false);
 
-  const [promptState, setPromptState] = useState<AgentPromptState | null>(null);
-  const [promptDraft, setPromptDraft] = useState('');
-  const [promptLoading, setPromptLoading] = useState(true);
-  const [promptBusy, setPromptBusy] = useState(false);
-  const [promptMsg, setPromptMsg] = useState('');
-
   function openTimelineResult(entry: TimelineEntry) {
     if (!entry.result) return;
     try {
@@ -57,28 +51,6 @@ export default function AgentDetail() {
   const activeTools = activeProject?.tools?.length ? activeProject.tools : TOOL_KEYS;
   const agentKey = key as AgentKey;
   const validAgent = AGENT_FUNCTION_KEYS.includes(agentKey);
-
-  useEffect(() => {
-    if (!validAgent) return;
-    let cancelled = false;
-    setPromptLoading(true);
-    scopedAction<AgentPromptState>('get_agent_prompt', { agent_key: agentKey })
-      .then((data) => {
-        if (cancelled) return;
-        setPromptState(data);
-        setPromptDraft(data.prompt);
-      })
-      .catch((e) => {
-        if (e instanceof UnauthorizedError) handleUnauthorized();
-      })
-      .finally(() => {
-        if (!cancelled) setPromptLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agentKey, validAgent]);
 
   if (!activeTools.includes('agentes')) {
     navigate('..', { replace: true });
@@ -129,33 +101,6 @@ export default function AgentDetail() {
     } finally {
       setPauseBusy(false);
     }
-  }
-
-  async function savePrompt() {
-    setPromptBusy(true);
-    setPromptMsg('');
-    try {
-      const result = await scopedAction<{ ok: boolean; is_custom: boolean }>('update_agent_prompt', {
-        agent_key: agentKey,
-        prompt: promptDraft,
-      });
-      setPromptState((prev) => (prev ? { ...prev, prompt: promptDraft, is_custom: result.is_custom } : prev));
-      setPromptMsg('Guardado.');
-    } catch (e) {
-      if (e instanceof UnauthorizedError) {
-        handleUnauthorized();
-        return;
-      }
-      setPromptMsg(e instanceof Error && e.message ? e.message : 'No se pudo guardar.');
-    } finally {
-      setPromptBusy(false);
-    }
-  }
-
-  function restoreDefaultPrompt() {
-    if (!promptState) return;
-    setPromptDraft(promptState.default_prompt);
-    setPromptMsg('');
   }
 
   return (
@@ -239,34 +184,6 @@ export default function AgentDetail() {
               <div className="timeline-empty">Sin acciones registradas todavía.</div>
             )}
           </div>
-        </div>
-
-        <div className="agent-prompt-editor">
-          <div className="desc-label">
-            Instrucción del sistema
-            {promptState?.is_custom && <span className="pill sending" style={{ marginLeft: 8 }}>Personalizado</span>}
-          </div>
-          {promptLoading ? (
-            <div className="empty-state">Cargando instrucción actual…</div>
-          ) : (
-            <>
-              <textarea
-                className="agent-prompt-textarea"
-                value={promptDraft}
-                onChange={(e) => setPromptDraft(e.target.value)}
-                spellCheck={false}
-              />
-              <div className="agent-prompt-actions">
-                <button className="manual-invoke-btn" onClick={savePrompt} disabled={promptBusy || !promptDraft.trim()}>
-                  {promptBusy ? 'Guardando...' : 'Guardar Configuración'}
-                </button>
-                <button className="btn btn-ghost btn-sm" onClick={restoreDefaultPrompt} disabled={promptBusy}>
-                  Restaurar default
-                </button>
-                <div className="manual-invoke-msg">{promptMsg}</div>
-              </div>
-            </>
-          )}
         </div>
 
         <div className="manual-invoke">
