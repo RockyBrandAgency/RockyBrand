@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { usePmsData } from '../../context/PmsDataContext';
 import Reveal from '../../components/Reveal';
 import BookingDetailModal from './BookingDetailModal';
+import PmsDayDetail from './PmsDayDetail';
 import { LODGE_ROOMS } from './pmsRooms';
 import type { PmsBooking } from '../../types';
 
@@ -30,13 +31,31 @@ function monthLabel(iso: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+function startOfMonthIso(iso: string) {
+  const d = new Date(`${iso}T00:00:00`);
+  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+}
+
+function addMonths(iso: string, n: number) {
+  const d = new Date(`${iso}T00:00:00`);
+  return new Date(d.getFullYear(), d.getMonth() + n, 1).toISOString().slice(0, 10);
+}
+
+function daysInMonth(iso: string) {
+  const d = new Date(`${iso}T00:00:00`);
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+}
+
 export default function PmsCalendario() {
   const { lodgeId, bookings, loading, loadError } = usePmsData();
+  const [view, setView] = useState<'month' | 'timeline'>('month');
   const [rangeStart, setRangeStart] = useState(todayIso());
+  const [monthAnchor, setMonthAnchor] = useState(startOfMonthIso(todayIso()));
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [selected, setSelected] = useState<PmsBooking | null>(null);
+  const today = todayIso();
 
   const days = useMemo(() => Array.from({ length: WINDOW_DAYS }, (_, i) => addDays(rangeStart, i)), [rangeStart]);
-  const today = todayIso();
 
   const rooms = useMemo(() => {
     const known = LODGE_ROOMS[lodgeId];
@@ -49,6 +68,32 @@ export default function PmsCalendario() {
   const rangeEndExclusive = addDays(rangeStart, WINDOW_DAYS);
   const occupiedToday = rooms.filter((r) => activeBookings.some((b) => b.RoomID === r.id && b.CheckIn <= today && today < b.CheckOut)).length;
 
+  const monthCells = useMemo(() => {
+    const first = monthAnchor;
+    const firstDow = new Date(`${first}T00:00:00`).getDay();
+    const numDays = daysInMonth(first);
+    const totalCells = Math.ceil((firstDow + numDays) / 7) * 7;
+    return Array.from({ length: totalCells }, (_, i) => {
+      const iso = addDays(first, i - firstDow);
+      return { iso, inMonth: i - firstDow >= 0 && i - firstDow < numDays };
+    });
+  }, [monthAnchor]);
+
+  function bookingsForDay(iso: string) {
+    return activeBookings.filter((b) => b.CheckIn <= iso && iso < b.CheckOut);
+  }
+
+  function occupancyForDay(iso: string) {
+    const dayBookings = bookingsForDay(iso);
+    const occupiedRoomIds = new Set(dayBookings.map((b) => b.RoomID));
+    return { occupied: occupiedRoomIds.size, total: rooms.length, dayBookings };
+  }
+
+  const selectedDayBookings = selectedDay ? bookingsForDay(selectedDay) : [];
+  const selectedDayFreeRooms = selectedDay
+    ? rooms.filter((r) => !selectedDayBookings.some((b) => b.RoomID === r.id)).map((r) => r.label)
+    : [];
+
   return (
     <Reveal>
       <div className="pms-cal-toolbar">
@@ -58,22 +103,51 @@ export default function PmsCalendario() {
           </span>
           <span className="cell-sub">habitaciones libres hoy</span>
         </div>
-        <div className="itinerary-daynav" style={{ margin: 0 }}>
-          <button className="btn btn-ghost btn-sm" onClick={() => setRangeStart((d) => addDays(d, -7))}>
-            ← Semana anterior
+
+        <div className="pms-cal-viewtoggle">
+          <button className={`btn btn-ghost btn-sm${view === 'month' ? ' active' : ''}`} onClick={() => setView('month')}>
+            Mes
           </button>
-          <div className="itinerary-daynav-current">
-            <span className="itinerary-daynav-label">{monthLabel(rangeStart)}</span>
-          </div>
-          <button className="btn btn-ghost btn-sm" onClick={() => setRangeStart((d) => addDays(d, 7))}>
-            Semana siguiente →
+          <button className={`btn btn-ghost btn-sm${view === 'timeline' ? ' active' : ''}`} onClick={() => setView('timeline')}>
+            Por habitación
           </button>
-          {rangeStart !== today && (
-            <button className="btn btn-ghost btn-sm" onClick={() => setRangeStart(today)}>
-              Hoy
-            </button>
-          )}
         </div>
+
+        {view === 'month' ? (
+          <div className="itinerary-daynav" style={{ margin: 0 }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => setMonthAnchor((d) => addMonths(d, -1))}>
+              ← Mes anterior
+            </button>
+            <div className="itinerary-daynav-current">
+              <span className="itinerary-daynav-label">{monthLabel(monthAnchor)}</span>
+            </div>
+            <button className="btn btn-ghost btn-sm" onClick={() => setMonthAnchor((d) => addMonths(d, 1))}>
+              Mes siguiente →
+            </button>
+            {monthAnchor !== startOfMonthIso(today) && (
+              <button className="btn btn-ghost btn-sm" onClick={() => setMonthAnchor(startOfMonthIso(today))}>
+                Hoy
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="itinerary-daynav" style={{ margin: 0 }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => setRangeStart((d) => addDays(d, -7))}>
+              ← Semana anterior
+            </button>
+            <div className="itinerary-daynav-current">
+              <span className="itinerary-daynav-label">{monthLabel(rangeStart)}</span>
+            </div>
+            <button className="btn btn-ghost btn-sm" onClick={() => setRangeStart((d) => addDays(d, 7))}>
+              Semana siguiente →
+            </button>
+            {rangeStart !== today && (
+              <button className="btn btn-ghost btn-sm" onClick={() => setRangeStart(today)}>
+                Hoy
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -82,6 +156,48 @@ export default function PmsCalendario() {
         <div className="empty-state">No se pudo conectar con el PMS.</div>
       ) : rooms.length === 0 ? (
         <div className="empty-state">Sin habitaciones para mostrar todavía.</div>
+      ) : view === 'month' ? (
+        <div className="pms-month">
+          <div className="pms-month-dow">
+            {DOW.map((d) => (
+              <div key={d} className="pms-month-dow-cell">
+                {d}
+              </div>
+            ))}
+          </div>
+          <div className="pms-month-grid">
+            {monthCells.map(({ iso, inMonth }) => {
+              const { occupied, total, dayBookings } = occupancyForDay(iso);
+              const isToday = iso === today;
+              const status = occupied === 0 ? 'free' : occupied === total ? 'full' : 'partial';
+              return (
+                <button
+                  key={iso}
+                  className={`pms-month-day ${status}${inMonth ? '' : ' out-of-month'}${isToday ? ' today' : ''}`}
+                  onClick={() => setSelectedDay(iso)}
+                >
+                  <span className="pms-month-daynum tabular">{Number(iso.slice(8, 10))}</span>
+                  {dayBookings.length > 0 && (
+                    <span className="pms-month-occupancy tabular">
+                      {total - occupied}/{total} libres
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <div className="pms-month-legend">
+            <span>
+              <i className="pms-month-swatch free" /> Libre
+            </span>
+            <span>
+              <i className="pms-month-swatch partial" /> Parcial
+            </span>
+            <span>
+              <i className="pms-month-swatch full" /> Completo
+            </span>
+          </div>
+        </div>
       ) : (
         <div className="pms-cal-scroll">
           <div className="pms-cal-grid" style={{ gridTemplateColumns: `188px repeat(${WINDOW_DAYS}, minmax(52px, 1fr))` }}>
@@ -151,6 +267,15 @@ export default function PmsCalendario() {
         </div>
       )}
 
+      {selectedDay && (
+        <PmsDayDetail
+          date={selectedDay}
+          bookings={selectedDayBookings}
+          freeRoomLabels={selectedDayFreeRooms}
+          onSelectBooking={(b) => setSelected(b)}
+          onClose={() => setSelectedDay(null)}
+        />
+      )}
       {selected && <BookingDetailModal booking={selected} onClose={() => setSelected(null)} />}
     </Reveal>
   );

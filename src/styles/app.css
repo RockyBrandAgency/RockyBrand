@@ -715,6 +715,33 @@ tbody tr:hover{ background:rgba(255,255,255,0.02); }
 .pms-cal-bar.trunc-end{ border-top-right-radius:0; border-bottom-right-radius:0; }
 .pms-cal-bar.trunc-end::after{ content:'›'; margin-left:4px; opacity:0.8; font-weight:800; }
 
+.pms-cal-viewtoggle{ display:flex; gap:6px; }
+.pms-cal-viewtoggle .btn.active{ background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+
+.pms-month{ border:1px solid var(--line); border-radius:12px; background:var(--panel); padding:16px; }
+.pms-month-dow{ display:grid; grid-template-columns:repeat(7, 1fr); margin-bottom:8px; }
+.pms-month-dow-cell{ font-size:9px; letter-spacing:0.05em; text-transform:uppercase; color:var(--dim-2); font-weight:700; text-align:center; padding-bottom:6px; }
+.pms-month-grid{ display:grid; grid-template-columns:repeat(7, 1fr); gap:6px; }
+.pms-month-day{ aspect-ratio:1.1; border-radius:10px; border:1px solid var(--line); background:rgba(255,255,255,0.012); cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:6px; transition:transform .12s, box-shadow .12s; }
+.pms-month-day:hover{ transform:translateY(-1px); box-shadow:0 4px 14px rgba(0,0,0,0.3); }
+.pms-month-day.out-of-month{ opacity:0.32; }
+.pms-month-day.today{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+.pms-month-day.free{ background:rgba(125,143,106,0.07); }
+.pms-month-day.partial{ background:rgba(192,138,46,0.18); }
+.pms-month-day.full{ background:rgba(192,138,46,0.38); }
+.pms-month-daynum{ font-size:13px; font-weight:800; color:var(--ink); }
+.pms-month-day.today .pms-month-daynum{ color:var(--accent); }
+.pms-month-occupancy{ font-size:8.5px; font-weight:700; color:var(--dim-2); letter-spacing:0.01em; }
+.pms-month-legend{ display:flex; gap:18px; margin-top:16px; font-size:11px; color:var(--dim); align-items:center; }
+.pms-month-legend span{ display:inline-flex; align-items:center; gap:6px; }
+.pms-month-swatch{ width:10px; height:10px; border-radius:3px; display:inline-block; }
+.pms-month-swatch.free{ background:rgba(125,143,106,0.5); }
+.pms-month-swatch.partial{ background:rgba(192,138,46,0.45); }
+.pms-month-swatch.full{ background:rgba(192,138,46,0.85); }
+
+.pms-day-detail-row{ width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px; background:transparent; border:none; text-align:left; cursor:pointer; font:inherit; }
+.pms-day-detail-free{ display:flex; flex-wrap:wrap; gap:6px; }
+
 /* ===== Modal de detalle ejecutivo (BookingDetailModal) ===== */
 .exec-detail-head{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:-8px 0 20px; }
 .exec-detail-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px 14px; padding:16px; border:1px solid var(--line); border-radius:10px; background:rgba(255,255,255,0.015); }
