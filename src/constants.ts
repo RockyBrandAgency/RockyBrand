@@ -36,6 +36,11 @@ export const DEFAULTS: Record<AgentKey, AgentConfig> = {
     desc: 'Chief Marketing Officer. El Manager de la Banda. No toca ningún instrumento: define el norte de marca y emite directivas obligatorias de canal/KPI/acción para que Dave, Jimi, Cameron, Thelma y Slash toquen la misma canción.',
     avatarUrl: '',
   },
+  crm: {
+    name: 'CRM Worker',
+    desc: 'Motor Operacional del CRM. No es parte de la banda de contenido: responde consultas reales por WhatsApp (reservas, ocupación, llegadas, leads) y envía notificaciones push de reservas, cancelaciones y leads VIP — siempre con datos reales, nunca inventados.',
+    avatarUrl: '',
+  },
 };
 
 export const AGENT_META: Record<AgentKey, { cls: string; initials: string; role: string; short: string }> = {
@@ -46,9 +51,10 @@ export const AGENT_META: Record<AgentKey, { cls: string; initials: string; role:
   fm: { cls: 'fm', initials: 'TH', role: 'Director de Montaje y Edición Cinematográfica', short: 'Filmmaker' },
   ri: { cls: 'ri', initials: 'CA', role: 'Market Research & Insight Scout', short: 'Research' },
   cmo: { cls: 'cmo', initials: 'RX', role: 'Chief Marketing Officer', short: 'CMO' },
+  crm: { cls: 'crm_worker', initials: 'CR', role: 'Motor Operacional del CRM', short: 'CRM Worker' },
 };
 
-export const AGENT_FUNCTION_KEYS: AgentKey[] = ['ad', 'an', 'seo', 'strategist', 'fm', 'ri', 'cmo'];
+export const AGENT_FUNCTION_KEYS: AgentKey[] = ['ad', 'an', 'seo', 'strategist', 'fm', 'ri', 'cmo', 'crm'];
 
 export const TOOL_META: Record<ToolKey, { label: string; icon: string }> = {
   agentes: { label: 'Agentes', icon: '◈' },
