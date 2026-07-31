@@ -27,6 +27,7 @@ import Templates from './pages/EmailCrm/Templates';
 import CrmMetricas from './pages/EmailCrm/Metricas';
 import CampanaDetalle from './pages/EmailCrm/CampanaDetalle';
 import Automatizaciones from './pages/EmailCrm/Automatizaciones';
+import Pendientes from './pages/EmailCrm/Pendientes';
 import { ThelmaStudioWorkspace } from './pages/ThelmaStudio/ThelmaStudioWorkspace';
 import Configuraciones from './pages/Configuraciones';
 
@@ -58,6 +59,7 @@ function AppRoutes() {
             <Route path="templates" element={<Templates />} />
             <Route path="metricas" element={<CrmMetricas />} />
             <Route path="automatizaciones" element={<Automatizaciones />} />
+            <Route path="pendientes" element={<Pendientes />} />
           </Route>
           <Route path="/thelma-studio" element={<ThelmaStudioWorkspace />} />
           <Route path="/configuraciones" element={<Configuraciones />} />
