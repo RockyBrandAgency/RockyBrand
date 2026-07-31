@@ -144,9 +144,8 @@ function AgentIdentityRow({ agentKey }: { agentKey: AgentKey }) {
 export default function Configuraciones() {
   return (
     <Reveal>
-      <div className="page-title" style={{ marginTop: 8 }}>
-        Configuraciones
-      </div>
+      <div className="eyebrow">Herramientas</div>
+      <div className="page-title">Configuraciones</div>
       <div className="page-sub">
         Identidad e instrucción del sistema de los 7 agentes — aplica a todos los clientes. Rox (CMO)
         es el único orquestador real del sistema: define el norte de marca y las directivas que Dave,

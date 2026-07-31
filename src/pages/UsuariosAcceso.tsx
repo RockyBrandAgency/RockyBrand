@@ -102,9 +102,8 @@ export default function UsuariosAcceso() {
 
   return (
     <Reveal>
-      <div className="page-title" style={{ marginTop: 8 }}>
-        Usuarios y accesos
-      </div>
+      <div className="eyebrow">General</div>
+      <div className="page-title">Usuarios y accesos</div>
       <div className="page-sub">
         Quién puede entrar al panel de administración de RockyBrand — la superficie más sensible
         del sistema. Cada acceso queda registrado abajo, con fecha, IP y resultado.
