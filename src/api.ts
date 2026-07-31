@@ -42,6 +42,19 @@ export async function login(username: string, password: string): Promise<string>
   return data.token;
 }
 
+// Login real, multi-usuario, vía Cognito - el default. `login()` de arriba
+// (password compartida) queda como respaldo permanente, no se retira.
+export async function panelLogin(username: string, password: string): Promise<string> {
+  const res = await fetch(CONFIG_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ __action: 'panel_login', username, password }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as { error?: string }).error || 'Credenciales inválidas');
+  return data.token;
+}
+
 export async function loadState<T = Record<string, unknown>>(projectId?: string): Promise<T> {
   const url = projectId ? `${CONFIG_API_URL}?project_id=${encodeURIComponent(projectId)}` : CONFIG_API_URL;
   const res = await fetch(url, { headers: { ...authHeaders() } });

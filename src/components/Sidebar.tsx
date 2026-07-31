@@ -147,6 +147,9 @@ export default function Sidebar() {
         <NavLink to="/reportes" className={({ isActive }) => `config-link${isActive ? ' current' : ''}`}>
           <span className="ico">▤</span> Reportes
         </NavLink>
+        <NavLink to="/usuarios-acceso" className={({ isActive }) => `config-link${isActive ? ' current' : ''}`}>
+          <span className="ico">⚿</span> Usuarios y accesos
+        </NavLink>
       </div>
 
       <div>
