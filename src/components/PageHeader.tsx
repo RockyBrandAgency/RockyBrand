@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { PROJECT_LOGO } from '../constants';
-import { formatTodayEs } from '../api';
+import { formatTodayEs, getClientDashboardUrl } from '../api';
 import type { HealthBadge, HomeSummary } from '../types';
 import Modal from './Modal';
 
@@ -135,6 +135,17 @@ export default function PageHeader({
         <div className="page-header-date">{formatTodayEs()}</div>
       </div>
       <div className="page-header-right">
+        {projectId && (
+          <a
+            className="btn btn-ghost btn-sm"
+            href={getClientDashboardUrl(projectId)}
+            target="_blank"
+            rel="noreferrer"
+            title="Abre el panel propio del cliente en otra pestaña (necesita su propio login)"
+          >
+            Ver panel del cliente ↗
+          </a>
+        )}
         {worstTone && systemHealth && (
           <button type="button" className={`sys-pill sys-pill-${worstTone} sys-pill-clickable`} onClick={() => setModalOpen(true)}>
             <span className={`sys-dot sys-dot-${worstTone}`} />

@@ -145,3 +145,16 @@ export function formatTodayEs(): string {
   const s = new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
+
+// URL del panel PROPIO del cliente (06-dashboard-web, login de Cognito
+// aparte, cada cliente ve solo lo suyo) - pedido explícito de Mato
+// (2026-08-01): un acceso directo desde la vista de staff, sin sacarlo de
+// las herramientas internas. Hoy todos los clientes comparten la misma
+// URL de Amplify (la identidad sale de SU login, no de la URL) - cuando
+// existan subdominios por cliente (nombredelcliente.panel.rockybrand.cl),
+// este es el único lugar que cambia.
+const CLIENT_DASHBOARD_BASE_URL = 'https://main.d3j6ejr1sqe253.amplifyapp.com';
+
+export function getClientDashboardUrl(_projectId: string): string {
+  return CLIENT_DASHBOARD_BASE_URL;
+}
