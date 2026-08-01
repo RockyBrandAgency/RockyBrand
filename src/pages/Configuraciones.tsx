@@ -143,7 +143,7 @@ function AgentIdentityRow({ agentKey }: { agentKey: AgentKey }) {
 
 export default function Configuraciones() {
   return (
-    <Reveal>
+    <div className="main">
       <div className="eyebrow">Herramientas</div>
       <div className="page-title">Configuraciones</div>
       <div className="page-sub">
@@ -162,6 +162,6 @@ export default function Configuraciones() {
           </Reveal>
         ))}
       </div>
-    </Reveal>
+    </div>
   );
 }

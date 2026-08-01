@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { callAction, UnauthorizedError, formatWhen } from '../api';
 import { useAuth } from '../context/AuthContext';
-import Reveal from '../components/Reveal';
 
 interface PanelUser {
   sub: string;
@@ -101,7 +100,7 @@ export default function UsuariosAcceso() {
   }
 
   return (
-    <Reveal>
+    <div className="main">
       <div className="eyebrow">General</div>
       <div className="page-title">Usuarios y accesos</div>
       <div className="page-sub">
@@ -214,6 +213,6 @@ export default function UsuariosAcceso() {
         {events !== null && !events.length && <div className="empty-state">Sin accesos registrados hoy todavía.</div>}
         {events === null && !loadError && <div className="empty-state">Cargando…</div>}
       </div>
-    </Reveal>
+    </div>
   );
 }
