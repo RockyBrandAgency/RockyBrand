@@ -108,8 +108,9 @@ export default function Agentes() {
         <span className="section-title">Asignación por cliente</span>
       </div>
       <div className="page-sub" style={{ marginTop: -8, marginBottom: 18 }}>
-        Qué agentes y qué herramientas tiene disponible cada cliente — se aplica a los actuales y a cualquiera que
-        agregues después.
+        "Servicios contratados" es real: decide si el cliente tiene el servicio de verdad, guardado en
+        rockybrand-client-config. "Agentes disponibles"/"Herramientas disponibles" abajo solo controlan qué se ve en
+        este panel — se aplica a los actuales y a cualquiera que agregues después.
       </div>
       <div className="config-projects-list">
         {projects.map((p, i) => (

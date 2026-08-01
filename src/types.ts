@@ -1,6 +1,14 @@
 export type AgentKey = 'ad' | 'an' | 'seo' | 'strategist' | 'fm' | 'ri' | 'cmo' | 'crm';
 export type ToolKey = 'agentes' | 'email-marketing' | 'metricas';
 
+// Servicios CONTRATADOS por el cliente (rockybrand-client-config.services,
+// real desde el backend) - distinto de `agents`/`tools` de arriba, que solo
+// controlan qué se ve en el panel, no qué corre de verdad. Este es a nivel
+// de servicio completo (Agentes/PMS/CRM/Email Marketing), no por agente
+// individual (eso lo sigue resolviendo `agents`).
+export type ServiceKey = 'agents' | 'pms' | 'crm' | 'email_marketing';
+export type ClientServices = Record<ServiceKey, boolean>;
+
 export interface AgentConfig {
   name: string;
   desc: string;

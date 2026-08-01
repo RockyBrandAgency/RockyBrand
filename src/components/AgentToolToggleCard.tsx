@@ -1,5 +1,6 @@
 import { usePanelData } from '../context/PanelDataContext';
 import { AGENT_META, AGENT_FUNCTION_KEYS, TOOL_META, TOOL_KEYS, PROJECT_LOGO } from '../constants';
+import ServicesToggleCard from './ServicesToggleCard';
 import type { AgentKey, Project, ToolKey } from '../types';
 
 // Tarjeta de un cliente: qué agentes y qué herramientas tiene habilitados.
@@ -35,8 +36,10 @@ export default function AgentToolToggleCard({ project }: { project: Project }) {
         </div>
       </div>
 
+      <ServicesToggleCard project={project} />
+
       <div className="desc-label" style={{ marginTop: 18 }}>
-        Agentes disponibles
+        Agentes disponibles <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(qué se ve en el panel, no si el cliente lo tiene contratado)</span>
       </div>
       <div className="config-chip-row">
         {AGENT_FUNCTION_KEYS.map((key) => {

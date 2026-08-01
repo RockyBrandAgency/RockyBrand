@@ -1,3 +1,5 @@
+import type { ClientServices } from './types';
+
 const CONFIG_API_URL = 'https://1gfa1uwd8i.execute-api.us-east-2.amazonaws.com/config';
 const TOKEN_STORAGE_KEY = 'rockybrandPanelToken';
 
@@ -82,6 +84,18 @@ export async function callAction<T = unknown>(action: string, extra?: Record<str
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data as { error?: string }).error || 'Error de conexión');
   return data as T;
+}
+
+export async function getClientServices(projectId: string): Promise<ClientServices> {
+  const data = await callAction<{ services: ClientServices }>('get_client_services', { project_id: projectId });
+  return data.services;
+}
+
+// Requiere sesión de staff (rockybrand-staff) - el backend lo vuelve a
+// validar server-side igual, este no es el único guardrail.
+export async function updateClientServices(projectId: string, services: Partial<ClientServices>): Promise<ClientServices> {
+  const data = await callAction<{ services: ClientServices }>('update_client_services', { project_id: projectId, services });
+  return data.services;
 }
 
 export function formatWhen(iso?: string): string {
