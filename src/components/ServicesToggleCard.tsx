@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getClientServices, updateClientServices, updateClientPmsFeatures, UnauthorizedError } from '../api';
 import { useAuth } from '../context/AuthContext';
-import type { ClientServices, PmsFeatures, Project, ServiceKey } from '../types';
+import type { ClientServices, PmsFeatureKey, PmsFeatures, Project, ServiceKey } from '../types';
 
 const SERVICE_META: Record<ServiceKey, { label: string; icon: string }> = {
   agents: { label: 'Agentes de IA', icon: '◈' },
@@ -12,6 +12,16 @@ const SERVICE_META: Record<ServiceKey, { label: string; icon: string }> = {
 
 const SERVICE_KEYS: ServiceKey[] = ['agents', 'pms', 'crm', 'email_marketing'];
 
+// Sub-opciones DENTRO de PMS - cada una clickeable solo si `services.pms`
+// está activo (todas dependen del mismo servicio padre hoy; si en el
+// futuro una sub-opción dependiera de otro servicio, parametrizar acá).
+const PMS_FEATURE_META: Record<PmsFeatureKey, { label: string; icon: string }> = {
+  pms_room_views: { label: 'Vistas de habitaciones (calendario, disponibilidad)', icon: '▦' },
+  pms_monthly_view: { label: 'Habitaciones (vista mensual)', icon: '▤' },
+};
+
+const PMS_FEATURE_KEYS: PmsFeatureKey[] = ['pms_room_views', 'pms_monthly_view'];
+
 // Servicios CONTRATADOS de verdad (rockybrand-client-config.services) -
 // distinto de AgentToolToggleCard, que solo controla qué se ve en el panel.
 // Togglear acá decide si el cliente tiene el servicio, no si un chip
@@ -21,7 +31,7 @@ export default function ServicesToggleCard({ project }: { project: Project }) {
   const [services, setServices] = useState<ClientServices | null>(null);
   const [pmsFeatures, setPmsFeatures] = useState<PmsFeatures | null>(null);
   const [error, setError] = useState('');
-  const [pending, setPending] = useState<ServiceKey | 'pms_monthly_view' | null>(null);
+  const [pending, setPending] = useState<ServiceKey | PmsFeatureKey | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,13 +71,13 @@ export default function ServicesToggleCard({ project }: { project: Project }) {
     }
   }
 
-  async function toggleMonthlyView() {
+  async function toggleFeature(key: PmsFeatureKey) {
     if (!pmsFeatures || pending) return;
-    const next = !pmsFeatures.pms_monthly_view;
-    setPending('pms_monthly_view');
+    const next = !pmsFeatures[key];
+    setPending(key);
     setError('');
     try {
-      const updated = await updateClientPmsFeatures(project.id, { pms_monthly_view: next });
+      const updated = await updateClientPmsFeatures(project.id, { [key]: next });
       setPmsFeatures(updated);
     } catch (e) {
       if (e instanceof UnauthorizedError) return handleUnauthorized();
@@ -78,8 +88,6 @@ export default function ServicesToggleCard({ project }: { project: Project }) {
   }
 
   const pmsEnabled = services ? services.pms : false;
-  const monthlyViewSelected = pmsFeatures ? pmsFeatures.pms_monthly_view : false;
-  const monthlyViewLoading = !pmsFeatures || pending === 'pms_monthly_view';
 
   return (
     <div>
@@ -107,18 +115,26 @@ export default function ServicesToggleCard({ project }: { project: Project }) {
         })}
       </div>
 
-      {/* Sub-opción de PMS - solo clickeable si PMS está contratado. */}
-      <div className="config-chip-row" style={{ marginTop: 8, paddingLeft: 18 }}>
-        <button
-          type="button"
-          className={`config-chip${monthlyViewSelected ? ' selected' : ''}`}
-          disabled={monthlyViewLoading || !pmsEnabled}
-          title={pmsEnabled ? undefined : 'Activa PMS primero'}
-          style={monthlyViewLoading || !pmsEnabled ? { opacity: 0.45, cursor: pmsEnabled ? 'wait' : 'not-allowed' } : undefined}
-          onClick={toggleMonthlyView}
-        >
-          <span className="ico">▤</span> Habitaciones (vista mensual)
-        </button>
+      {/* Sub-opciones de PMS - solo clickeables si PMS está contratado. */}
+      <div className="config-chip-row" style={{ marginTop: 8, paddingLeft: 18, flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+        {PMS_FEATURE_KEYS.map((key) => {
+          const meta = PMS_FEATURE_META[key];
+          const selected = pmsFeatures ? pmsFeatures[key] : false;
+          const loading = !pmsFeatures || pending === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              className={`config-chip${selected ? ' selected' : ''}`}
+              disabled={loading || !pmsEnabled}
+              title={pmsEnabled ? undefined : 'Activa PMS primero'}
+              style={loading || !pmsEnabled ? { opacity: 0.45, cursor: pmsEnabled ? 'wait' : 'not-allowed' } : undefined}
+              onClick={() => toggleFeature(key)}
+            >
+              <span className="ico">{meta.icon}</span> {meta.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

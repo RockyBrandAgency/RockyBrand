@@ -10,10 +10,27 @@ export type ServiceKey = 'agents' | 'pms' | 'crm' | 'email_marketing';
 export type ClientServices = Record<ServiceKey, boolean>;
 
 // Sub-opciones DENTRO de un servicio (no on/off del servicio completo) -
-// hoy solo la vista mensual de PMS. Default false del lado del backend:
-// opt-in explícito por cliente, no algo que ya estaba andando.
-export type PmsFeatureKey = 'pms_monthly_view';
+// cada una con su propio default del lado del backend (ver
+// PMS_FEATURE_DEFAULTS en panel_config_api_lambda.py):
+// - pms_monthly_view: vista mensual por semana. Default false - opt-in
+//   explícito, nadie la tenía antes de que existiera.
+// - pms_room_views: toggle Habitaciones/Viajeros - un cliente sin
+//   habitaciones (solo viajeros) apaga esto y el PMS deja de mostrar
+//   Calendario/Disponibilidad, quedándose con Itinerario/Huéspedes/
+//   Reservas (ya centradas en personas, no en habitaciones). Default
+//   true - preserva a los clientes que ya usan habitaciones hoy.
+export type PmsFeatureKey = 'pms_monthly_view' | 'pms_room_views';
 export type PmsFeatures = Record<PmsFeatureKey, boolean>;
+
+// Catálogo curado de habitaciones (reemplaza el diccionario hardcodeado
+// que vivía en pmsRooms.ts) - opcional, si el cliente no lo tiene
+// configurado el frontend sigue derivando habitaciones de los RoomID
+// vistos en las reservas (mismo fallback de siempre).
+export interface RoomCatalogEntry {
+  room_id: string;
+  label: string;
+  category: string;
+}
 
 export interface AgentConfig {
   name: string;

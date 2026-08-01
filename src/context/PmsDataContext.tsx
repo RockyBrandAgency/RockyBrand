@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { UnauthorizedError } from '../api';
+import { getClientServices, UnauthorizedError } from '../api';
 import * as pmsApi from '../pmsApi';
 import { useAuth } from './AuthContext';
-import type { PmsGuest, PmsBooking } from '../types';
+import type { PmsGuest, PmsBooking, PmsFeatures, RoomCatalogEntry } from '../types';
 
 interface PmsDataValue {
   lodgeId: string;
@@ -14,6 +14,11 @@ interface PmsDataValue {
   refetch: () => Promise<void>;
   createGuest: (payload: Record<string, unknown>) => Promise<{ GuestID: string }>;
   createBooking: (payload: Record<string, unknown>) => Promise<{ BookingID: string }>;
+  // Sub-opciones de PMS del lodge activo (pms_room_views, etc) + catálogo
+  // curado de habitaciones - null mientras carga o si falló (nunca se
+  // esconde una vista real por un falso negativo de carga).
+  pmsFeatures: PmsFeatures | null;
+  roomCatalog: RoomCatalogEntry[];
 }
 
 const PmsDataContext = createContext<PmsDataValue | null>(null);
@@ -28,8 +33,34 @@ export function PmsDataProvider({ children }: { children: ReactNode }) {
   const [bookings, setBookings] = useState<PmsBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [pmsFeatures, setPmsFeatures] = useState<PmsFeatures | null>(null);
+  const [roomCatalog, setRoomCatalog] = useState<RoomCatalogEntry[]>([]);
   const lodgeIdRef = useRef(lodgeId);
   lodgeIdRef.current = lodgeId;
+
+  useEffect(() => {
+    const requestedLodgeId = lodgeId;
+    let cancelled = false;
+    setPmsFeatures(null);
+    setRoomCatalog([]);
+    getClientServices(requestedLodgeId)
+      .then(({ pmsFeatures: pf, roomCatalog: rc }) => {
+        if (cancelled || lodgeIdRef.current !== requestedLodgeId) return;
+        setPmsFeatures(pf);
+        setRoomCatalog(rc);
+      })
+      .catch((e) => {
+        if (e instanceof UnauthorizedError) return handleUnauthorized();
+        // Silencioso a propósito, mismo criterio que activeServices en
+        // PanelDataContext: pmsFeatures se queda null y las vistas de
+        // habitaciones se siguen mostrando (nunca se esconde algo real
+        // por un error de red transitorio).
+        console.error('Error cargando las sub-opciones de PMS', e);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [lodgeId, handleUnauthorized]);
 
   const setLodgeId = useCallback((id: string) => {
     localStorage.setItem(LODGE_STORAGE_KEY, id);
@@ -84,7 +115,19 @@ export function PmsDataProvider({ children }: { children: ReactNode }) {
 
   return (
     <PmsDataContext.Provider
-      value={{ lodgeId, setLodgeId, guests, bookings, loading, loadError, refetch, createGuest, createBooking }}
+      value={{
+        lodgeId,
+        setLodgeId,
+        guests,
+        bookings,
+        loading,
+        loadError,
+        refetch,
+        createGuest,
+        createBooking,
+        pmsFeatures,
+        roomCatalog,
+      }}
     >
       {children}
     </PmsDataContext.Provider>

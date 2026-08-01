@@ -3,7 +3,6 @@ import { usePmsData } from '../../context/PmsDataContext';
 import Reveal from '../../components/Reveal';
 import BookingDetailModal from './BookingDetailModal';
 import PmsDayDetail from './PmsDayDetail';
-import { LODGE_ROOMS } from './pmsRooms';
 import type { PmsBooking } from '../../types';
 
 const WINDOW_DAYS = 21;
@@ -47,7 +46,7 @@ function daysInMonth(iso: string) {
 }
 
 export default function PmsCalendario() {
-  const { lodgeId, bookings, loading, loadError } = usePmsData();
+  const { bookings, loading, loadError, roomCatalog } = usePmsData();
   const [view, setView] = useState<'month' | 'timeline'>('month');
   const [rangeStart, setRangeStart] = useState(todayIso());
   const [monthAnchor, setMonthAnchor] = useState(startOfMonthIso(todayIso()));
@@ -58,11 +57,14 @@ export default function PmsCalendario() {
   const days = useMemo(() => Array.from({ length: WINDOW_DAYS }, (_, i) => addDays(rangeStart, i)), [rangeStart]);
 
   const rooms = useMemo(() => {
-    const known = LODGE_ROOMS[lodgeId];
-    if (known) return known;
+    if (roomCatalog.length) {
+      return roomCatalog.map((r) => ({ id: r.room_id, label: r.label, category: r.category }));
+    }
+    // Sin catálogo curado en client-config: deriva las habitaciones de
+    // los RoomID ya vistos en las reservas (mismo fallback de siempre).
     const distinct = Array.from(new Set(bookings.map((b) => b.RoomID))).sort();
     return distinct.map((id) => ({ id, label: id, category: '' }));
-  }, [lodgeId, bookings]);
+  }, [roomCatalog, bookings]);
 
   const activeBookings = bookings.filter((b) => b.Status !== 'CANCELLED');
   const rangeEndExclusive = addDays(rangeStart, WINDOW_DAYS);

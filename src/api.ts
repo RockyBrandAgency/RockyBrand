@@ -1,4 +1,4 @@
-import type { ClientAlertsResponse, ClientServices, PmsFeatures } from './types';
+import type { ClientAlertsResponse, ClientServices, PmsFeatures, RoomCatalogEntry } from './types';
 
 const CONFIG_API_URL = 'https://1gfa1uwd8i.execute-api.us-east-2.amazonaws.com/config';
 const TOKEN_STORAGE_KEY = 'rockybrandPanelToken';
@@ -86,9 +86,14 @@ export async function callAction<T = unknown>(action: string, extra?: Record<str
   return data as T;
 }
 
-export async function getClientServices(projectId: string): Promise<{ services: ClientServices; pmsFeatures: PmsFeatures }> {
-  const data = await callAction<{ services: ClientServices; pms_features: PmsFeatures }>('get_client_services', { project_id: projectId });
-  return { services: data.services, pmsFeatures: data.pms_features };
+export async function getClientServices(
+  projectId: string
+): Promise<{ services: ClientServices; pmsFeatures: PmsFeatures; roomCatalog: RoomCatalogEntry[] }> {
+  const data = await callAction<{ services: ClientServices; pms_features: PmsFeatures; room_catalog: RoomCatalogEntry[] }>(
+    'get_client_services',
+    { project_id: projectId }
+  );
+  return { services: data.services, pmsFeatures: data.pms_features, roomCatalog: data.room_catalog ?? [] };
 }
 
 // Requiere sesión de staff (rockybrand-staff) - el backend lo vuelve a

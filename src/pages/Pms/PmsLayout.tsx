@@ -4,13 +4,17 @@ import { usePanelData } from '../../context/PanelDataContext';
 import { PmsDataProvider, usePmsData } from '../../context/PmsDataContext';
 import { useSlidingIndicator } from '../../hooks/useSlidingIndicator';
 
+// roomOnly: solo tiene sentido para un cliente que usa habitaciones -
+// se oculta cuando `pms_room_views` está apagado (cliente "solo
+// viajeros"). Itinerario/Huéspedes/Reservas ya están centradas en
+// personas, no en habitaciones, así que quedan siempre visibles.
 const TABS = [
-  { to: '.', label: 'Resumen', end: true },
-  { to: 'calendario', label: 'Calendario' },
-  { to: 'itinerario', label: 'Itinerario' },
-  { to: 'vista-mensual', label: 'Vista mensual' },
-  { to: 'reservas', label: 'Reservas' },
-  { to: 'huespedes', label: 'Huéspedes' },
+  { to: '.', label: 'Resumen', end: true, roomOnly: false },
+  { to: 'calendario', label: 'Calendario', end: false, roomOnly: true },
+  { to: 'itinerario', label: 'Itinerario', end: false, roomOnly: false },
+  { to: 'vista-mensual', label: 'Vista mensual', end: false, roomOnly: false },
+  { to: 'reservas', label: 'Reservas', end: false, roomOnly: false },
+  { to: 'huespedes', label: 'Huéspedes', end: false, roomOnly: false },
 ];
 
 function LodgeSwitcher() {
@@ -35,8 +39,13 @@ function LodgeSwitcher() {
 function PmsShell() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { pmsFeatures } = usePmsData();
   const tabbarRef = useRef<HTMLDivElement>(null);
   useSlidingIndicator(tabbarRef, '.tab.active', 'horizontal', [location.pathname]);
+
+  // pmsFeatures null mientras carga -> se ven todas las tabs (nunca se
+  // esconde una vista real por un falso negativo de carga en curso).
+  const visibleTabs = TABS.filter((t) => !t.roomOnly || !pmsFeatures || pmsFeatures.pms_room_views);
 
   return (
     <div className="main">
@@ -57,7 +66,7 @@ function PmsShell() {
 
       <div className="tabbar" ref={tabbarRef}>
         <div className="slide-indicator slide-indicator-h" />
-        {TABS.map((t) => (
+        {visibleTabs.map((t) => (
           <NavLink key={t.label} to={t.to} end={t.end} className={({ isActive }) => `tab${isActive ? ' active' : ''}`}>
             {t.label}
           </NavLink>
