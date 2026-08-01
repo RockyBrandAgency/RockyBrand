@@ -1,8 +1,8 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
-import { loadState, saveState, callAction, UnauthorizedError } from '../api';
+import { loadState, saveState, callAction, getClientServices, UnauthorizedError } from '../api';
 import { useAuth } from './AuthContext';
 import { DEFAULTS, DEFAULT_PROJECTS, AGENT_FUNCTION_KEYS, TOOL_KEYS } from '../constants';
-import type { AgentConfig, AgentKey, AgentStatus, ContentGrid, Project, ToolKey } from '../types';
+import type { AgentConfig, AgentKey, AgentStatus, ClientServices, ContentGrid, Project, ToolKey } from '../types';
 
 function slugify(name: string): string {
   return (
@@ -24,6 +24,12 @@ interface PanelDataValue {
   activeProjectId: string | null;
   activeProjectName: string;
   activeProject: Project | undefined;
+  // Servicios REALES del cliente activo (rockybrand-client-config.services)
+  // - distinto de `activeProject.tools`, que solo controla visibilidad
+  // cosmética. null mientras carga o si no hay cliente activo. Usado por
+  // el Sidebar para el "modo cliente aislado": ocultar herramientas que
+  // el cliente activo no tiene contratadas.
+  activeServices: ClientServices | null;
   setActiveProjectId: (id: string | null) => void;
   addProject: (name: string, agents?: AgentKey[], tools?: ToolKey[]) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
@@ -45,6 +51,7 @@ export function PanelDataProvider({ children }: { children: ReactNode }) {
   // Sin proyecto seleccionado por defecto: el Home muestra la tarjeta de
   // bienvenida hasta que el usuario elige un proyecto en el sidebar.
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [activeServices, setActiveServices] = useState<ClientServices | null>(null);
   const [loading, setLoading] = useState(true);
   const [rawState, setRawState] = useState<Record<string, unknown>>({});
   const activeProjectIdRef = useRef(activeProjectId);
@@ -86,6 +93,30 @@ export function PanelDataProvider({ children }: { children: ReactNode }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, activeProjectId, refetch]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !activeProjectId) {
+      setActiveServices(null);
+      return;
+    }
+    let cancelled = false;
+    setActiveServices(null);
+    getClientServices(activeProjectId)
+      .then(({ services }) => {
+        if (!cancelled) setActiveServices(services);
+      })
+      .catch((e) => {
+        if (e instanceof UnauthorizedError) return handleUnauthorized();
+        // Silencioso a propósito: si falla, el Sidebar cae de vuelta a
+        // mostrar todo (activeServices null = sin filtro) - nunca un
+        // cliente real se queda sin poder ver una herramienta por un
+        // error de red transitorio.
+        console.error('Error cargando los servicios del cliente activo', e);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, activeProjectId, handleUnauthorized]);
 
   const scopedAction = useCallback(
     <T = unknown,>(action: string, extra?: Record<string, unknown>) =>
@@ -145,6 +176,7 @@ export function PanelDataProvider({ children }: { children: ReactNode }) {
         activeProjectId,
         activeProjectName,
         activeProject,
+        activeServices,
         setActiveProjectId,
         addProject,
         deleteProject,

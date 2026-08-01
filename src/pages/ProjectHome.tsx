@@ -1,11 +1,34 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { usePanelData } from '../context/PanelDataContext';
-import { callAction, formatRelative } from '../api';
+import { callAction, formatRelative, getClientAlerts } from '../api';
 import { AGENT_META, AGENT_FUNCTION_KEYS, DEFAULTS } from '../constants';
-import type { AiSpendClientLine, AiSpendOverview, ContentPiece } from '../types';
+import type { AiSpendClientLine, AiSpendOverview, ClientAlert, ContentPiece } from '../types';
 import Reveal from '../components/Reveal';
 import type { ProjectOutletContext } from '../components/ProjectLayout';
+
+// Etiqueta humana + texto de detalle por cada clave de métrica que puede
+// venir en rojo desde el semáforo real (dashboard_metrics.compute_semaforo)
+// - mismo cálculo que ya usa el Executive Dashboard del cliente
+// (crm-dashboard-api), una sola fuente de verdad para lo que cuenta como
+// alerta operativa.
+const ALERT_META: Record<string, { title: string; detail: (valor: any) => string }> = {
+  ocupacion_30d: { title: 'Ocupación baja (próximos 30 días)', detail: (v) => `Ocupación proyectada: ${v}%` },
+  reservas_nuevas_7d: { title: 'Pocas reservas nuevas', detail: (v) => `${v.cantidad} reserva(s) nueva(s) en los últimos 7 días` },
+  leads_7d: { title: 'Pocos leads nuevos', detail: (v) => `${v.cantidad} contacto(s) nuevo(s) en los últimos 7 días` },
+  open_rate_ultima_campana: { title: 'Open rate bajo', detail: (v) => `Última campaña: ${v}% de apertura` },
+  llegadas_con_banderas: { title: 'Huéspedes con notas especiales sin revisar', detail: (v) => `${v} llegada(s) en las próximas 48h con restricciones o notas especiales` },
+};
+
+// llegadas_48h en rojo significa exactamente que hay con_banderas > 0
+// (ver _metric_llegadas_summary) - cuando el semáforo lo marca rojo,
+// derive_alerts siempre agrega también llegadas_con_banderas, que ya
+// cuenta lo mismo con más detalle. Evita mostrar dos tarjetas para el
+// mismo evento real.
+function dedupeAlerts(alertas: ClientAlert[]): ClientAlert[] {
+  const hasBanderas = alertas.some((a) => a.metrica === 'llegadas_con_banderas');
+  return alertas.filter((a) => !(a.metrica === 'llegadas_48h' && hasBanderas));
+}
 
 function mostRecentPiece(pieces: { fecha: string; piece: ContentPiece }[]): ContentPiece | null {
   if (!pieces.length) return null;
@@ -23,6 +46,7 @@ export default function ProjectHome() {
   const navigate = useNavigate();
   const [spend, setSpend] = useState<AiSpendClientLine | null>(null);
   const [spendError, setSpendError] = useState(false);
+  const [alertas, setAlertas] = useState<ClientAlert[] | null>(null);
 
   const projectAgentKeys = activeProject?.agents?.length ? activeProject.agents : AGENT_FUNCTION_KEYS;
 
@@ -38,6 +62,26 @@ export default function ProjectHome() {
       .catch((e) => {
         console.error('Error cargando el gasto de IA del cliente', e);
         if (!cancelled) setSpendError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProjectId]);
+
+  useEffect(() => {
+    if (!activeProjectId) return;
+    let cancelled = false;
+    setAlertas(null);
+    getClientAlerts(activeProjectId)
+      .then((data) => {
+        if (!cancelled) setAlertas(dedupeAlerts(data.alertas));
+      })
+      .catch((e) => {
+        // Silencioso a propósito, mismo criterio que activeServices en
+        // PanelDataContext: un error de red transitorio no debe verse
+        // como "el cliente no tiene alertas", simplemente no se muestra
+        // la sección.
+        console.error('Error cargando las alertas del cliente', e);
       });
     return () => {
       cancelled = true;
@@ -244,6 +288,25 @@ export default function ProjectHome() {
             </a>
           </div>
         </Reveal>
+      )}
+
+      {alertas && alertas.length > 0 && (
+        <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {alertas.map((a, i) => {
+            const meta = ALERT_META[a.metrica];
+            return (
+              <Reveal key={a.metrica} delay={i * 60}>
+                <div className="alert-card alert-card-warn">
+                  <span className="alert-card-icon">⚠</span>
+                  <div className="alert-card-body">
+                    <div className="alert-card-title">{meta?.title ?? a.metrica}</div>
+                    <div className="alert-card-detail">{meta ? meta.detail(a.valor) : JSON.stringify(a.valor)}</div>
+                  </div>
+                </div>
+              </Reveal>
+            );
+          })}
+        </div>
       )}
 
       <div className="section-head" style={{ marginTop: 36 }}>

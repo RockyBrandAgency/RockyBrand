@@ -8,8 +8,16 @@ import type { AgentKey, ToolKey } from '../types';
 
 export default function Sidebar() {
   const { logout } = useAuth();
-  const { projects, activeProjectId, deleteProject, addProject } = usePanelData();
+  const { projects, activeProjectId, activeServices, deleteProject, addProject } = usePanelData();
   const navigate = useNavigate();
+
+  // "Modo cliente aislado": con un cliente activo, Herramientas se filtra
+  // por lo que ESE cliente tiene contratado de verdad (services real, no
+  // el `tools` cosmético) - reduce ruido de staff trabajando un cliente a
+  // la vez. Sin cliente activo, o mientras carga, se ve todo (nunca se
+  // esconde algo por un false negativo de carga).
+  const showPms = !activeProjectId || activeServices === null || activeServices.pms;
+  const showEmailMarketing = !activeProjectId || activeServices === null || activeServices.email_marketing;
 
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
@@ -154,12 +162,16 @@ export default function Sidebar() {
 
       <div>
         <div className="nav-label">Herramientas</div>
-        <NavLink to="/email-marketing" className={({ isActive }) => `config-link${isActive ? ' current' : ''}`}>
-          <span className="ico">✉</span> Email Marketing
-        </NavLink>
-        <NavLink to="/pms" className={({ isActive }) => `config-link${isActive ? ' current' : ''}`}>
-          <span className="ico">⌂</span> PMS
-        </NavLink>
+        {showEmailMarketing && (
+          <NavLink to="/email-marketing" className={({ isActive }) => `config-link${isActive ? ' current' : ''}`}>
+            <span className="ico">✉</span> Email Marketing
+          </NavLink>
+        )}
+        {showPms && (
+          <NavLink to="/pms" className={({ isActive }) => `config-link${isActive ? ' current' : ''}`}>
+            <span className="ico">⌂</span> PMS
+          </NavLink>
+        )}
         <NavLink to="/thelma-studio" className={({ isActive }) => `config-link${isActive ? ' current' : ''}`}>
           <span className="ico">▶</span> Thelma Studio
         </NavLink>

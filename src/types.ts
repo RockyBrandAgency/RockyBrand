@@ -434,3 +434,18 @@ export interface PmsMonthlyOverview {
   month: number;
   semanas: PmsMonthlyWeek[];
 }
+
+// Cada `valor` depende de `metrica` - ver derive_alerts en
+// crm_assistant_queries.py: para la mayoría de las métricas es el mismo
+// `valor` que trae el semáforo (número o { cantidad, ... }), y para
+// `llegadas_con_banderas` es directamente un número.
+export interface ClientAlert {
+  metrica: string;
+  valor: unknown;
+}
+
+export interface ClientAlertsResponse {
+  client_id: string;
+  alertas: ClientAlert[];
+  semaforo: Record<string, { valor: unknown; estado: string }>;
+}

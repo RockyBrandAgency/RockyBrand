@@ -1,4 +1,4 @@
-import type { ClientServices, PmsFeatures } from './types';
+import type { ClientAlertsResponse, ClientServices, PmsFeatures } from './types';
 
 const CONFIG_API_URL = 'https://1gfa1uwd8i.execute-api.us-east-2.amazonaws.com/config';
 const TOKEN_STORAGE_KEY = 'rockybrandPanelToken';
@@ -104,6 +104,10 @@ export async function updateClientServices(projectId: string, services: Partial<
 export async function updateClientPmsFeatures(projectId: string, pmsFeatures: Partial<PmsFeatures>): Promise<PmsFeatures> {
   const data = await callAction<{ pms_features: PmsFeatures }>('update_client_services', { project_id: projectId, pms_features: pmsFeatures });
   return data.pms_features;
+}
+
+export async function getClientAlerts(projectId: string): Promise<ClientAlertsResponse> {
+  return callAction<ClientAlertsResponse>('get_client_alerts', { project_id: projectId });
 }
 
 export function formatWhen(iso?: string): string {
