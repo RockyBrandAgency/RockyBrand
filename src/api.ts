@@ -1,4 +1,4 @@
-import type { ClientServices } from './types';
+import type { ClientServices, PmsFeatures } from './types';
 
 const CONFIG_API_URL = 'https://1gfa1uwd8i.execute-api.us-east-2.amazonaws.com/config';
 const TOKEN_STORAGE_KEY = 'rockybrandPanelToken';
@@ -86,9 +86,9 @@ export async function callAction<T = unknown>(action: string, extra?: Record<str
   return data as T;
 }
 
-export async function getClientServices(projectId: string): Promise<ClientServices> {
-  const data = await callAction<{ services: ClientServices }>('get_client_services', { project_id: projectId });
-  return data.services;
+export async function getClientServices(projectId: string): Promise<{ services: ClientServices; pmsFeatures: PmsFeatures }> {
+  const data = await callAction<{ services: ClientServices; pms_features: PmsFeatures }>('get_client_services', { project_id: projectId });
+  return { services: data.services, pmsFeatures: data.pms_features };
 }
 
 // Requiere sesión de staff (rockybrand-staff) - el backend lo vuelve a
@@ -96,6 +96,14 @@ export async function getClientServices(projectId: string): Promise<ClientServic
 export async function updateClientServices(projectId: string, services: Partial<ClientServices>): Promise<ClientServices> {
   const data = await callAction<{ services: ClientServices }>('update_client_services', { project_id: projectId, services });
   return data.services;
+}
+
+// Sub-opción DENTRO de PMS (no on/off del servicio completo) - misma
+// acción de backend que updateClientServices, con pms_features en vez de
+// services en el body.
+export async function updateClientPmsFeatures(projectId: string, pmsFeatures: Partial<PmsFeatures>): Promise<PmsFeatures> {
+  const data = await callAction<{ pms_features: PmsFeatures }>('update_client_services', { project_id: projectId, pms_features: pmsFeatures });
+  return data.pms_features;
 }
 
 export function formatWhen(iso?: string): string {

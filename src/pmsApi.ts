@@ -1,5 +1,5 @@
 import { getStoredToken, UnauthorizedError } from './api';
-import type { PmsGuest, PmsBooking, PmsAddon, PmsItinerary } from './types';
+import type { PmsGuest, PmsBooking, PmsAddon, PmsItinerary, PmsMonthlyOverview } from './types';
 
 const PMS_API_URL = 'https://laer7rii87.execute-api.us-east-2.amazonaws.com/pms';
 
@@ -28,12 +28,20 @@ export function createGuest(lodgeId: string, payload: Record<string, unknown>): 
   return request(`/${lodgeId}/guests`, { method: 'POST', body: payload });
 }
 
+export function updateGuest(lodgeId: string, guestId: string, patch: Record<string, unknown>): Promise<{ GuestID: string; message: string }> {
+  return request(`/${lodgeId}/guests/${guestId}`, { method: 'PATCH', body: patch });
+}
+
 export function listBookings(lodgeId: string): Promise<{ bookings: PmsBooking[] }> {
   return request(`/${lodgeId}/bookings`);
 }
 
 export function createBooking(lodgeId: string, payload: Record<string, unknown>): Promise<{ BookingID: string }> {
   return request(`/${lodgeId}/bookings`, { method: 'POST', body: payload });
+}
+
+export function updateBooking(lodgeId: string, bookingId: string, patch: Record<string, unknown>): Promise<{ BookingID: string; message: string }> {
+  return request(`/${lodgeId}/bookings/${bookingId}`, { method: 'PATCH', body: patch });
 }
 
 export function listAddons(lodgeId: string, bookingId: string): Promise<{ addons: PmsAddon[] }> {
@@ -46,4 +54,8 @@ export function createAddon(lodgeId: string, bookingId: string, payload: Record<
 
 export function getItinerary(lodgeId: string, date: string): Promise<PmsItinerary> {
   return request(`/${lodgeId}/itinerary?date=${encodeURIComponent(date)}`);
+}
+
+export function getMonthlyOverview(lodgeId: string, year: number, month: number): Promise<PmsMonthlyOverview> {
+  return request(`/${lodgeId}/monthly-overview?year=${year}&month=${month}`);
 }

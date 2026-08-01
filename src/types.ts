@@ -9,6 +9,12 @@ export type ToolKey = 'agentes' | 'email-marketing' | 'metricas';
 export type ServiceKey = 'agents' | 'pms' | 'crm' | 'email_marketing';
 export type ClientServices = Record<ServiceKey, boolean>;
 
+// Sub-opciones DENTRO de un servicio (no on/off del servicio completo) -
+// hoy solo la vista mensual de PMS. Default false del lado del backend:
+// opt-in explícito por cliente, no algo que ya estaba andando.
+export type PmsFeatureKey = 'pms_monthly_view';
+export type PmsFeatures = Record<PmsFeatureKey, boolean>;
+
 export interface AgentConfig {
   name: string;
   desc: string;
@@ -400,4 +406,31 @@ export interface PmsItinerary {
   date: string;
   bookings: PmsBooking[];
   experiences: PmsAddon[];
+}
+
+export interface PmsMonthlyWeekArrival {
+  BookingID: string;
+  CheckIn: string;
+  CheckOut: string;
+  RoomID: string;
+  FullName: string;
+}
+
+export interface PmsMonthlyWeekRoom {
+  room_id: string;
+  noches_ocupadas: number;
+  noches_totales: number;
+}
+
+export interface PmsMonthlyWeek {
+  semana_iso: string;
+  dias: string[];
+  viajeros: { cantidad_llegadas: number; detalle: PmsMonthlyWeekArrival[] };
+  habitaciones: PmsMonthlyWeekRoom[];
+}
+
+export interface PmsMonthlyOverview {
+  year: number;
+  month: number;
+  semanas: PmsMonthlyWeek[];
 }

@@ -9,6 +9,7 @@ import PmsLayout from './pages/Pms/PmsLayout';
 import PmsResumen from './pages/Pms/PmsResumen';
 import PmsCalendario from './pages/Pms/PmsCalendario';
 import PmsItinerario from './pages/Pms/PmsItinerario';
+import PmsVistaMensual from './pages/Pms/PmsVistaMensual';
 import PmsReservas from './pages/Pms/PmsReservas';
 import PmsHuespedes from './pages/Pms/PmsHuespedes';
 import ProjectLayout from './components/ProjectLayout';
@@ -69,6 +70,7 @@ function AppRoutes() {
             <Route index element={<PmsResumen />} />
             <Route path="calendario" element={<PmsCalendario />} />
             <Route path="itinerario" element={<PmsItinerario />} />
+            <Route path="vista-mensual" element={<PmsVistaMensual />} />
             <Route path="reservas" element={<PmsReservas />} />
             <Route path="huespedes" element={<PmsHuespedes />} />
           </Route>

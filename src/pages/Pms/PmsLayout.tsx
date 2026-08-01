@@ -8,6 +8,7 @@ const TABS = [
   { to: '.', label: 'Resumen', end: true },
   { to: 'calendario', label: 'Calendario' },
   { to: 'itinerario', label: 'Itinerario' },
+  { to: 'vista-mensual', label: 'Vista mensual' },
   { to: 'reservas', label: 'Reservas' },
   { to: 'huespedes', label: 'Huéspedes' },
 ];

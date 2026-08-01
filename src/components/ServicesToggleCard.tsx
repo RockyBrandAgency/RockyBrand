@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { getClientServices, updateClientServices, UnauthorizedError } from '../api';
+import { getClientServices, updateClientServices, updateClientPmsFeatures, UnauthorizedError } from '../api';
 import { useAuth } from '../context/AuthContext';
-import type { ClientServices, Project, ServiceKey } from '../types';
+import type { ClientServices, PmsFeatures, Project, ServiceKey } from '../types';
 
 const SERVICE_META: Record<ServiceKey, { label: string; icon: string }> = {
   agents: { label: 'Agentes de IA', icon: '◈' },
@@ -19,16 +19,21 @@ const SERVICE_KEYS: ServiceKey[] = ['agents', 'pms', 'crm', 'email_marketing'];
 export default function ServicesToggleCard({ project }: { project: Project }) {
   const { handleUnauthorized } = useAuth();
   const [services, setServices] = useState<ClientServices | null>(null);
+  const [pmsFeatures, setPmsFeatures] = useState<PmsFeatures | null>(null);
   const [error, setError] = useState('');
-  const [pending, setPending] = useState<ServiceKey | null>(null);
+  const [pending, setPending] = useState<ServiceKey | 'pms_monthly_view' | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     setServices(null);
+    setPmsFeatures(null);
     setError('');
     getClientServices(project.id)
-      .then((s) => {
-        if (!cancelled) setServices(s);
+      .then(({ services: s, pmsFeatures: pf }) => {
+        if (!cancelled) {
+          setServices(s);
+          setPmsFeatures(pf);
+        }
       })
       .catch((e) => {
         if (cancelled) return;
@@ -56,6 +61,26 @@ export default function ServicesToggleCard({ project }: { project: Project }) {
     }
   }
 
+  async function toggleMonthlyView() {
+    if (!pmsFeatures || pending) return;
+    const next = !pmsFeatures.pms_monthly_view;
+    setPending('pms_monthly_view');
+    setError('');
+    try {
+      const updated = await updateClientPmsFeatures(project.id, { pms_monthly_view: next });
+      setPmsFeatures(updated);
+    } catch (e) {
+      if (e instanceof UnauthorizedError) return handleUnauthorized();
+      setError(e instanceof Error ? e.message : 'No se pudo guardar.');
+    } finally {
+      setPending(null);
+    }
+  }
+
+  const pmsEnabled = services ? services.pms : false;
+  const monthlyViewSelected = pmsFeatures ? pmsFeatures.pms_monthly_view : false;
+  const monthlyViewLoading = !pmsFeatures || pending === 'pms_monthly_view';
+
   return (
     <div>
       <div className="desc-label" style={{ marginTop: 18 }}>
@@ -80,6 +105,20 @@ export default function ServicesToggleCard({ project }: { project: Project }) {
             </button>
           );
         })}
+      </div>
+
+      {/* Sub-opción de PMS - solo clickeable si PMS está contratado. */}
+      <div className="config-chip-row" style={{ marginTop: 8, paddingLeft: 18 }}>
+        <button
+          type="button"
+          className={`config-chip${monthlyViewSelected ? ' selected' : ''}`}
+          disabled={monthlyViewLoading || !pmsEnabled}
+          title={pmsEnabled ? undefined : 'Activa PMS primero'}
+          style={monthlyViewLoading || !pmsEnabled ? { opacity: 0.45, cursor: pmsEnabled ? 'wait' : 'not-allowed' } : undefined}
+          onClick={toggleMonthlyView}
+        >
+          <span className="ico">▤</span> Habitaciones (vista mensual)
+        </button>
       </div>
     </div>
   );
