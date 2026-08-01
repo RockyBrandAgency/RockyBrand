@@ -149,12 +149,11 @@ export function formatTodayEs(): string {
 // URL del panel PROPIO del cliente (06-dashboard-web, login de Cognito
 // aparte, cada cliente ve solo lo suyo) - pedido explícito de Mato
 // (2026-08-01): un acceso directo desde la vista de staff, sin sacarlo de
-// las herramientas internas. Hoy todos los clientes comparten la misma
-// URL de Amplify (la identidad sale de SU login, no de la URL) - cuando
-// existan subdominios por cliente (nombredelcliente.panel.rockybrand.cl),
-// este es el único lugar que cambia.
-const CLIENT_DASHBOARD_BASE_URL = 'https://main.d3j6ejr1sqe253.amplifyapp.com';
-
-export function getClientDashboardUrl(_projectId: string): string {
-  return CLIENT_DASHBOARD_BASE_URL;
+// las herramientas internas. Subdominio real por cliente
+// (nombredelcliente.panel.rockybrand.cl, wildcard en la asociación de
+// dominio de Amplify) - agregar el origen exacto a `allow_origins` en
+// dashboard_stack.py al sumar un cliente nuevo (API Gateway v2 no admite
+// wildcards en CORS, confirmado en vivo).
+export function getClientDashboardUrl(projectId: string): string {
+  return `https://${projectId}.panel.rockybrand.cl`;
 }
