@@ -1,4 +1,4 @@
-import type { ClientAlertsResponse, ClientServices, PmsFeatures, RoomCatalogEntry } from './types';
+import type { ClientAlertsResponse, ClientServices, CostsOverview, PmsFeatures, RoomCatalogEntry } from './types';
 
 const CONFIG_API_URL = 'https://1gfa1uwd8i.execute-api.us-east-2.amazonaws.com/config';
 const TOKEN_STORAGE_KEY = 'rockybrandPanelToken';
@@ -161,4 +161,42 @@ export function formatTodayEs(): string {
 // wildcards en CORS, confirmado en vivo).
 export function getClientDashboardUrl(projectId: string): string {
   return `https://${projectId}.panel.rockybrand.cl`;
+}
+
+// ===== Sección COSTOS =====
+// Requiere sesión de staff; el backend lo vuelve a verificar server-side
+// (un token de cliente recibe 403 aunque llame directo al endpoint).
+
+export async function getCostsOverview(): Promise<CostsOverview> {
+  return callAction<CostsOverview>('get_costs_overview');
+}
+
+export async function saveFixedCost(payload: {
+  nombre: string;
+  monto: number;
+  moneda: 'USD' | 'CLP';
+  ciclo: 'mensual' | 'anual';
+  dia_cobro?: number | null;
+  icono?: string | null;
+  nota?: string | null;
+  slug?: string;
+  activa?: boolean;
+}): Promise<{ ok: boolean; cost_id: string }> {
+  return callAction('save_fixed_cost', payload);
+}
+
+export async function deleteFixedCost(costId: string): Promise<{ ok: boolean }> {
+  return callAction('delete_fixed_cost', { cost_id: costId });
+}
+
+export async function saveClientRevenue(
+  clientId: string,
+  montoUsd: number
+): Promise<{ ok: boolean }> {
+  return callAction('save_client_revenue', { client_id: clientId, monto_usd: montoUsd });
+}
+
+/** Cuesta USD 0,01 (una consulta a Cost Explorer). Confirmar con el usuario antes. */
+export async function refreshCostsNow(): Promise<{ ok: boolean; costo_estimado_usd: number; nota: string }> {
+  return callAction('refresh_costs_now');
 }

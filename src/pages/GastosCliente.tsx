@@ -14,22 +14,32 @@ export default function GastosCliente() {
   const [spend, setSpend] = useState<AiSpendClientLine | null>(null);
   const [periodMonth, setPeriodMonth] = useState<string>('');
   const [error, setError] = useState(false);
+  // Distinguir "cargando" de "no hay consumo": sin esto los KPI se quedaban
+  // en "…" para siempre cuando el mes no tenía datos — que es exactamente lo
+  // que pasa con los agentes pausados. `no_data_reason` lo manda el backend.
+  const [cargando, setCargando] = useState(true);
+  const [sinDatos, setSinDatos] = useState<string | null>(null);
 
   useEffect(() => {
     if (!activeProjectId) return;
     let cancelled = false;
     setSpend(null);
     setError(false);
+    setCargando(true);
+    setSinDatos(null);
     callAction<AiSpendOverview>('get_ai_spend_overview', { project_ids: [activeProjectId] })
       .then((data) => {
         if (!cancelled) {
-          setSpend(data.by_client[0] ?? null);
+          const linea = data.by_client[0] ?? null;
+          setSpend(linea);
           setPeriodMonth(data.period_month);
+          setSinDatos(linea ? null : (data.no_data_reason ?? 'Sin consumo registrado este mes.'));
+          setCargando(false);
         }
       })
       .catch((e) => {
         console.error('Error cargando el gasto de este cliente', e);
-        if (!cancelled) setError(true);
+        if (!cancelled) { setError(true); setCargando(false); }
       });
     return () => {
       cancelled = true;
@@ -45,36 +55,40 @@ export default function GastosCliente() {
 
       {error && <div className="empty-state">No se pudo cargar el gasto de este cliente.</div>}
 
-      {!error && (
+      {!error && sinDatos && !cargando && (
+        <div className="empty-state">{sinDatos}</div>
+      )}
+
+      {!error && !sinDatos && (
         <>
           <div className="mini-dash">
             <Reveal delay={0}>
               <div className="mini-card c-pms">
                 <div className="mini-card-icon">$</div>
                 <div className="mini-card-label">Costo total del mes</div>
-                <div className="mini-card-value tabular">{spend ? money(spend.cost_usd) : '…'}</div>
-                <div className="mini-card-sub">{spend ? `${(spend.input_tokens + spend.output_tokens).toLocaleString('es-CL')} tokens (in + out)` : 'Cargando…'}</div>
+                <div className="mini-card-value tabular">{spend ? money(spend.cost_usd) : cargando ? '…' : '—'}</div>
+                <div className="mini-card-sub">{spend ? `${(spend.input_tokens + spend.output_tokens).toLocaleString('es-CL')} tokens (in + out)` : cargando ? 'Cargando…' : 'sin datos'}</div>
               </div>
             </Reveal>
             <Reveal delay={60}>
               <div className="mini-card c-pms">
                 <div className="mini-card-icon">◆</div>
                 <div className="mini-card-label">Tokens de entrada</div>
-                <div className="mini-card-value tabular">{spend ? spend.input_tokens.toLocaleString('es-CL') : '…'}</div>
+                <div className="mini-card-value tabular">{spend ? spend.input_tokens.toLocaleString('es-CL') : cargando ? '…' : '—'}</div>
               </div>
             </Reveal>
             <Reveal delay={120}>
               <div className="mini-card c-pms">
                 <div className="mini-card-icon">◈</div>
                 <div className="mini-card-label">Tokens de salida</div>
-                <div className="mini-card-value tabular">{spend ? spend.output_tokens.toLocaleString('es-CL') : '…'}</div>
+                <div className="mini-card-value tabular">{spend ? spend.output_tokens.toLocaleString('es-CL') : cargando ? '…' : '—'}</div>
               </div>
             </Reveal>
             <Reveal delay={180}>
               <div className="mini-card c-pms">
                 <div className="mini-card-icon">◎</div>
                 <div className="mini-card-label">Tokens de razonamiento</div>
-                <div className="mini-card-value tabular">{spend ? spend.thinking_tokens.toLocaleString('es-CL') : '…'}</div>
+                <div className="mini-card-value tabular">{spend ? spend.thinking_tokens.toLocaleString('es-CL') : cargando ? '…' : '—'}</div>
                 <div className="mini-card-sub">Ya incluidos en el costo de output</div>
               </div>
             </Reveal>

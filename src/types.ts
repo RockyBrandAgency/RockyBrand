@@ -377,7 +377,21 @@ export interface AiSpendOtherProvider {
 
 export interface AiSpendOverview {
   period_month: string;
-  claude: { provider: string; cost_usd: number; input_tokens: number; output_tokens: number; thinking_tokens: number };
+  /** false = el mes no tiene consumo. Distinto de "todavía cargando". */
+  has_data: boolean;
+  /** Motivo legible cuando has_data es false. */
+  no_data_reason: string | null;
+  /** Avisa si está corriendo la tarifa introductoria de Sonnet 5. */
+  pricing_note: string;
+  claude: {
+    provider: string;
+    cost_usd: number;
+    input_tokens: number;
+    output_tokens: number;
+    thinking_tokens: number;
+    cache_write_tokens: number;
+    cache_read_tokens: number;
+  };
   other_providers: AiSpendOtherProvider[];
   by_client: AiSpendClientLine[];
   top_client: string | null;
@@ -465,4 +479,126 @@ export interface ClientAlertsResponse {
   client_id: string;
   alertas: ClientAlert[];
   semaforo: Record<string, { valor: unknown; estado: string }>;
+}
+
+// ===== Sección COSTOS (solo agencia) =====
+// Todo esto lo produce cost-collector y lo lee panel-config-api; el panel
+// nunca llama a Cost Explorer ni a Meta. Cada bloque puede venir con
+// `error` en vez de cifras: en ese caso se muestra el motivo, nunca un cero.
+
+export interface AwsServiceLine {
+  servicio: string;
+  uso: number;
+  credito: number;
+  soporte: number;
+  otro: number;
+}
+
+export interface AwsMonth {
+  periodo: string;
+  /** Cost Explorer marca el mes en curso como estimado (~24 h de retraso). */
+  estimado: boolean;
+  servicios: AwsServiceLine[];
+  total_bruto_usd: number;
+  total_credito_usd: number;
+  total_neto_usd: number;
+  es_mes_en_curso: boolean;
+  collected_at: string;
+}
+
+export interface ClaudeAgentLine {
+  agent_key: string;
+  agent_name: string;
+  modelo: string;
+  tokens_entrada: number;
+  tokens_salida: number;
+  tokens_razonamiento: number;
+  tokens_cache_escritura: number;
+  tokens_cache_lectura: number;
+  costo_usd: number;
+}
+
+export interface ClaudeMonth {
+  periodo: string;
+  por_cliente: Record<string, { costo_usd: number; agentes: ClaudeAgentLine[] }>;
+  total_usd: number;
+  tarifa_introductoria_vigente: boolean;
+  tarifa_introductoria_vence: string | null;
+  sin_datos?: boolean;
+  motivo?: string;
+  collected_at: string;
+}
+
+export interface MetaClientCost {
+  client_id: string;
+  waba_id?: string;
+  numero?: string;
+  nombre_verificado?: string;
+  cuenta_oficial?: boolean;
+  /** Verificado contra el metadato real del WABA, no asumido. */
+  es_numero_de_prueba?: boolean;
+  sin_whatsapp?: boolean;
+  por_mes?: Record<string, { conversaciones: number; costo_usd: number }>;
+  collected_at: string;
+}
+
+export interface FixedCost {
+  cost_id: string;
+  nombre: string;
+  monto: number;
+  moneda: 'USD' | 'CLP';
+  ciclo: 'mensual' | 'anual';
+  dia_cobro: number | null;
+  icono: string | null;
+  nota: string | null;
+  /** null si es CLP y todavía no hay tipo de cambio: no se inventa la conversión. */
+  mensual_usd: number | null;
+}
+
+export interface ClientMargin {
+  client_id: string;
+  costo_claude_usd: number;
+  costo_whatsapp_usd: number;
+  whatsapp_es_numero_de_prueba: boolean;
+  whatsapp_sin_configurar: boolean;
+  costo_variable_usd: number;
+  /** null = todavía no cargaste lo que paga este cliente. */
+  paga_usd: number | null;
+  margen_usd: number | null;
+  margen_pct: number | null;
+}
+
+export interface CostsOverview {
+  mes_actual: string;
+  mes_anterior: string;
+  tipo_cambio: {
+    valor_clp: number;
+    /** No es la fecha de hoy: el dólar observado no se publica fines de semana. */
+    fecha_dato: string;
+    descripcion: string;
+    collected_at: string;
+  } | null;
+  resumen: {
+    fijo_mensual_usd: number;
+    variable_mes_usd: number;
+    variable_atribuible_usd: number;
+    /** Costo COMPARTIDO de AWS. No se reparte entre clientes. */
+    aws_plataforma_usd: number;
+    total_mes_usd: number;
+    equivalente_diario_usd: number | null;
+    ingreso_recurrente_usd: number;
+    margen_usd: number;
+    margen_pct: number | null;
+    suscripciones_sin_convertir: string[];
+  };
+  fijos: FixedCost[];
+  aws: { mes_actual: AwsMonth | null; mes_anterior: AwsMonth | null; error: string | null; retraso_horas: number };
+  claude: { mes_actual: ClaudeMonth | null; error: string | null };
+  meta: { por_cliente: MetaClientCost[]; error: string | null };
+  margenes: ClientMargin[];
+  ultima_corrida: {
+    collected_at: string;
+    resultados: Record<string, string>;
+    invocacion: string;
+  } | null;
 }

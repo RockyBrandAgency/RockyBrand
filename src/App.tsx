@@ -32,6 +32,7 @@ import Pendientes from './pages/EmailCrm/Pendientes';
 import { ThelmaStudioWorkspace } from './pages/ThelmaStudio/ThelmaStudioWorkspace';
 import Configuraciones from './pages/Configuraciones';
 import UsuariosAcceso from './pages/UsuariosAcceso';
+import Costos from './pages/Costos';
 
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
@@ -51,6 +52,7 @@ function AppRoutes() {
           <Route path="/" element={<Home />} />
           <Route path="/reportes" element={<Reportes />} />
           <Route path="/usuarios-acceso" element={<UsuariosAcceso />} />
+          <Route path="/costos" element={<Costos />} />
           <Route path="/agentes" element={<Agentes />} />
           <Route path="/agentes/:key" element={<AgentDetail />} />
           <Route path="/email-marketing" element={<EmailCrmLayout />}>

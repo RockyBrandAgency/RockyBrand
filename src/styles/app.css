@@ -824,3 +824,101 @@ tbody tr:hover{ background:rgba(255,255,255,0.02); }
 @media (max-width:900px){
   .exec-detail-grid{ grid-template-columns:repeat(2,1fr); }
 }
+
+/* ===== Sección COSTOS (solo agencia) ===== */
+.costos-toolbar{ display:flex; align-items:center; gap:10px; }
+/* Son 6 KPI: con el auto-fit heredado quedaban 5 arriba y 1 huérfana abajo.
+   Rejilla 3x2 explícita para que las dos filas queden parejas. */
+.costos-resumen{ margin-top:6px; grid-template-columns:repeat(3,minmax(0,1fr)); }
+@media (max-width:1100px){ .costos-resumen{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:640px){ .costos-resumen{ grid-template-columns:1fr; } }
+
+.costos-aviso{
+  margin-top:16px; padding:13px 15px; border-radius:10px; font-size:12px; line-height:1.65;
+  background:rgba(94,117,131,0.08); border:1px solid var(--line); color:var(--dim); font-weight:500;
+}
+.costos-aviso strong{ color:var(--ink); font-weight:700; }
+.costos-aviso-warn{ background:rgba(192,138,46,0.09); border-color:rgba(192,138,46,0.28); }
+
+.costos-card{ margin-top:18px; padding:22px; }
+.costos-card-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:20px; margin-bottom:18px; flex-wrap:wrap; }
+.costos-card-total{ text-align:right; min-width:150px; }
+
+/* Etiqueta corta para estados honestos: "estimado por AWS", "~24 h de
+   retraso", "número de prueba". Nunca decora un número: lo califica. */
+.costos-tag{
+  display:inline-block; margin-left:7px; padding:2px 7px; border-radius:5px;
+  font-size:9.5px; letter-spacing:0.05em; text-transform:uppercase; font-weight:700;
+  background:rgba(192,138,46,0.14); color:var(--ochre); vertical-align:middle;
+}
+/* Un dato que NO existe se ve distinto de un dato que vale cero. */
+.costos-nodato{ color:var(--dim-2); font-style:italic; font-weight:500; }
+.costos-ok{ color:var(--growth); font-weight:700; }
+.costos-mal{ color:var(--decline); font-weight:700; }
+
+.costos-barras-wrap{ position:relative; }
+.costos-barras{ position:absolute; inset:0; width:100%; height:100%; }
+.costos-barra{ fill:rgba(202,150,0,0.30); }
+.costos-barra-cubierta{ fill:rgba(94,117,131,0.26); }
+.costos-barras-labels{ position:relative; }
+.costos-barra-fila{
+  display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:14px;
+  padding:0 10px; font-size:12px; border-bottom:1px solid var(--line);
+}
+.costos-barra-fila:last-child{ border-bottom:none; }
+.costos-barra-nombre{ font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.costos-barra-valor{ font-weight:700; }
+.costos-barra-credito{ font-size:10.5px; color:var(--dim-2); min-width:112px; text-align:right; }
+
+.costos-comparacion{
+  display:flex; align-items:baseline; gap:12px; margin-top:16px; padding-top:14px;
+  border-top:1px solid var(--line); font-size:12px; font-weight:600;
+}
+.costos-comparacion .costos-nodato{ font-size:11px; }
+
+.costos-fila-cliente td{ background:rgba(0,0,0,0.02); font-weight:700; }
+.costos-indent{ padding-left:26px; }
+
+.costos-editable{
+  background:none; border:none; padding:0; font:inherit; color:var(--accent);
+  font-weight:700; cursor:pointer; border-bottom:1px dashed var(--line);
+}
+.costos-editable:hover{ border-bottom-color:var(--accent); }
+.costos-inline-edit{ display:inline-flex; gap:6px; align-items:center; }
+.costos-inline-edit input{
+  width:92px; padding:5px 8px; font-size:12px; border:1px solid var(--line);
+  border-radius:6px; font-family:inherit;
+}
+
+/* Las tablas de costos tienen muchas columnas numéricas: en pantalla chica
+   scrollean dentro de su propia caja en vez de romper el ancho de la página. */
+@media (max-width:760px){
+  .costos-card-head{ flex-direction:column; }
+  .costos-card-total{ text-align:left; }
+  .costos-barra-credito{ display:none; }
+  .costos-barra-fila{ grid-template-columns:1fr auto; }
+}
+
+/* Las tablas de Costos tienen 5-6 columnas numéricas y en móvil no caben.
+   Scrollean dentro de su propia caja: el body de la página nunca scrollea
+   en horizontal (verificado con Playwright a 390px, scrollWidth 808 antes
+   de esto). */
+.costos-tabla-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; margin-top:2px; }
+.costos-tabla-wrap table{ min-width:520px; }
+
+/* .page-header es un flex sin wrap compartido por todas las páginas. En vez
+   de tocarlo (cambiaría el layout de Overview, Agentes, Reportes…), Costos
+   usa este modificador: a 390px el título y la barra de moneda se apilan en
+   vez de empujar el ancho de la página. Encontrado midiendo el DOM con
+   Playwright, no mirando la captura: scrollWidth 826 vs 390. */
+.costos-header{ flex-wrap:wrap; gap:14px; }
+.costos-header > *{ min-width:0; }
+.costos-header .costos-toolbar{ flex-wrap:wrap; }
+
+/* .section-head y .costos-toolbar son flex sin wrap: a 390px el botón
+   "Agregar suscripción" y el selector de moneda empujaban el ancho.
+   Envuelven solo dentro de Costos para no alterar las demás páginas. */
+@media (max-width:820px){
+  .costos-header, .costos-toolbar{ flex-wrap:wrap; row-gap:10px; }
+  .costos-header .costos-toolbar{ width:100%; justify-content:flex-start; }
+}
