@@ -106,7 +106,12 @@ export interface EmailContact {
   client_id: string;
   email: string;
   name: string;
-  status: 'subscribed' | 'unsubscribed' | 'bounced';
+  // El tipo iba atrasado respecto del backend: `pending` lo escribe la
+  // importacion con doble opt-in desde 2026-08-03 y `complained` lo escribe
+  // el webhook de quejas de SES. Mientras faltaron aca, TypeScript no dejaba
+  // ni siquiera comparar contra ellos - por eso el panel mostraba la palabra
+  // cruda en ingles en vez de una etiqueta.
+  status: 'subscribed' | 'pending' | 'unsubscribed' | 'bounced' | 'complained';
   tags: string[];
   created_at?: string;
   unsub_reason?: string;

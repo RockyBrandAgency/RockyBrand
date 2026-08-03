@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useCrmData } from '../../context/CrmDataContext';
 import { managementSegments, contactStatusLabel } from './crmUtils';
+import ImportarCsv from './ImportarCsv';
 
 export default function Audiencias() {
   const { contacts, refetch, scopedAction } = useCrmData();
@@ -8,6 +9,7 @@ export default function Audiencias() {
   const [activeSegment, setActiveSegment] = useState('all');
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [tags, setTags] = useState('');
@@ -62,10 +64,18 @@ export default function Audiencias() {
       <div>
         <div className="crm-toolbar">
           <input className="crm-search" placeholder="Buscar contacto..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          <button className="btn btn-primary btn-sm" onClick={() => setShowForm((v) => !v)}>
+          {/* Las dos vias de alta, una al lado de la otra: a mano para un
+              contacto suelto, archivo para una base entera. Mismas dos
+              opciones que tiene el cliente en su propio panel. */}
+          <button className="btn btn-ghost btn-sm" onClick={() => { setShowImport((v) => !v); setShowForm(false); }}>
+            ⇪ Importar CSV
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={() => { setShowForm((v) => !v); setShowImport(false); }}>
             + Agregar contacto
           </button>
         </div>
+
+        {showImport && <ImportarCsv onImportado={() => { setShowImport(false); refetch(); }} />}
 
         {showForm && (
           <div className="card form-section" style={{ maxWidth: 'none' }}>
