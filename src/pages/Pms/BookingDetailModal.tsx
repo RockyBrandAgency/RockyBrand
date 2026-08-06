@@ -18,7 +18,8 @@ function formatDayEs(iso: string) {
 const PAYMENT_PILL: Record<string, string> = { PAID: 'paid', PENDING: 'pending-pay', PARTIAL: 'partial', REFUNDED: 'refunded' };
 
 export default function BookingDetailModal({ booking, onClose }: { booking: PmsBooking; onClose: () => void }) {
-  const { lodgeId, guests } = usePmsData();
+  const { lodgeId, guests, pmsFeatures } = usePmsData();
+  const roomViews = pmsFeatures ? pmsFeatures.pms_room_views : true;
   const [addons, setAddons] = useState<PmsAddon[] | null>(null);
 
   useEffect(() => {
@@ -61,7 +62,7 @@ export default function BookingDetailModal({ booking, onClose }: { booking: PmsB
           <div className="exec-detail-value">{nights(booking)}</div>
         </div>
         <div className="exec-detail-item">
-          <div className="post-popup-field-label">Habitación</div>
+          <div className="post-popup-field-label">{roomViews ? 'Habitación' : 'Programa'}</div>
           <div className="exec-detail-value">{booking.RoomID}</div>
         </div>
         <div className="exec-detail-item">

@@ -3,7 +3,12 @@ import Modal from '../../components/Modal';
 import { usePmsData } from '../../context/PmsDataContext';
 
 export default function NewBookingModal({ onClose }: { onClose: () => void }) {
-  const { guests, createBooking } = usePmsData();
+  const { guests, createBooking, pmsFeatures } = usePmsData();
+  // Clientes sin habitaciones (pms_room_views apagado, ej. viajes guiados)
+  // igual necesitan un RoomID - el backend lo exige (pms_models.Booking) -
+  // pero acá no tiene sentido pedirles una "cabaña": se relabela para que
+  // el staff anote el programa/actividad en el mismo campo.
+  const roomViews = pmsFeatures ? pmsFeatures.pms_room_views : true;
   const [guestId, setGuestId] = useState(guests[0]?.GuestID || '');
   const [roomId, setRoomId] = useState('');
   const [checkIn, setCheckIn] = useState('');
@@ -66,8 +71,13 @@ export default function NewBookingModal({ onClose }: { onClose: () => void }) {
           </select>
         </div>
         <div className="crm-field">
-          <label>Cabaña / habitación</label>
-          <input autoFocus value={roomId} onChange={(e) => setRoomId(e.target.value)} placeholder="Ej. Cabaña Sur" />
+          <label>{roomViews ? 'Cabaña / habitación' : 'Programa / actividad'}</label>
+          <input
+            autoFocus
+            value={roomId}
+            onChange={(e) => setRoomId(e.target.value)}
+            placeholder={roomViews ? 'Ej. Cabaña Sur' : 'Ej. Pesca con mosca 3 días'}
+          />
         </div>
         <div className="modal-row-3">
           <div className="crm-field">

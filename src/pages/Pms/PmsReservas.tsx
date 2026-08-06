@@ -16,7 +16,8 @@ const SOURCE_LABEL: Record<string, string> = { Direct: 'Directa', OTA_Headless: 
 const PAYMENT_PILL: Record<string, string> = { PAID: 'paid', PENDING: 'pending-pay', PARTIAL: 'partial', REFUNDED: 'refunded' };
 
 export default function PmsReservas() {
-  const { bookings, loading, loadError, lodgeId } = usePmsData();
+  const { bookings, loading, loadError, lodgeId, pmsFeatures } = usePmsData();
+  const roomViews = pmsFeatures ? pmsFeatures.pms_room_views : true;
   const [showNew, setShowNew] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [addonsByBooking, setAddonsByBooking] = useState<Record<string, PmsAddon[]>>({});
@@ -79,7 +80,7 @@ export default function PmsReservas() {
           <thead>
             <tr>
               <th>Huésped</th>
-              <th>Cabaña</th>
+              <th>{roomViews ? 'Cabaña' : 'Programa'}</th>
               <th>Check-in</th>
               <th>Check-out</th>
               <th>Noches</th>
