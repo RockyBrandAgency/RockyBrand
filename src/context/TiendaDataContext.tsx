@@ -17,6 +17,7 @@ function storeAction<T = unknown>(action: string, extra?: Record<string, unknown
 interface TiendaDataValue {
   resumen: StoreDashboardResumen | null;
   productos: StoreProduct[];
+  umbralStockBajo: number;
   ordenes: StoreOrder[];
   mensajes: StoreContactMessage[];
   loading: boolean;
@@ -24,7 +25,7 @@ interface TiendaDataValue {
   refetch: () => Promise<void>;
   refetchProductos: () => Promise<void>;
   refetchOrdenes: () => Promise<void>;
-  actualizarProducto: (sku: string, cambios: { precio_clp?: number; stock?: number }) => Promise<void>;
+  actualizarProducto: (sku: string, cambios: { precio_clp?: number; stock?: number; activo?: boolean; stock_actual_esperado?: number }) => Promise<void>;
   marcarDespachado: (orderId: string, numeroSeguimiento: string) => Promise<void>;
   obtenerDetalleOrden: (orderId: string) => Promise<StoreOrder>;
 }
@@ -35,6 +36,7 @@ export function TiendaDataProvider({ children }: { children: ReactNode }) {
   const { handleUnauthorized } = useAuth();
   const [resumen, setResumen] = useState<StoreDashboardResumen | null>(null);
   const [productos, setProductos] = useState<StoreProduct[]>([]);
+  const [umbralStockBajo, setUmbralStockBajo] = useState(2);
   const [ordenes, setOrdenes] = useState<StoreOrder[]>([]);
   const [mensajes, setMensajes] = useState<StoreContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,12 +48,13 @@ export function TiendaDataProvider({ children }: { children: ReactNode }) {
     try {
       const [r, p, o, m] = await Promise.all([
         storeAction<StoreDashboardResumen>('store_dashboard'),
-        storeAction<{ productos: StoreProduct[] }>('store_list_products'),
+        storeAction<{ productos: StoreProduct[]; umbral_stock_bajo: number }>('store_list_products'),
         storeAction<{ ordenes: StoreOrder[] }>('store_list_orders'),
         storeAction<{ mensajes: StoreContactMessage[] }>('store_list_contact_messages'),
       ]);
       setResumen(r);
       setProductos(p.productos || []);
+      setUmbralStockBajo(p.umbral_stock_bajo ?? 2);
       setOrdenes(o.ordenes || []);
       setMensajes(m.mensajes || []);
     } catch (e) {
@@ -65,8 +68,9 @@ export function TiendaDataProvider({ children }: { children: ReactNode }) {
 
   const refetchProductos = useCallback(async () => {
     try {
-      const p = await storeAction<{ productos: StoreProduct[] }>('store_list_products');
+      const p = await storeAction<{ productos: StoreProduct[]; umbral_stock_bajo: number }>('store_list_products');
       setProductos(p.productos || []);
+      setUmbralStockBajo(p.umbral_stock_bajo ?? 2);
     } catch (e) {
       if (e instanceof UnauthorizedError) return handleUnauthorized();
       console.error('Error recargando productos', e);
@@ -88,7 +92,7 @@ export function TiendaDataProvider({ children }: { children: ReactNode }) {
   }, [refetch]);
 
   const actualizarProducto = useCallback(
-    async (sku: string, cambios: { precio_clp?: number; stock?: number }) => {
+    async (sku: string, cambios: { precio_clp?: number; stock?: number; activo?: boolean; stock_actual_esperado?: number }) => {
       await storeAction('store_update_product', { sku, ...cambios });
       await refetchProductos();
     },
@@ -113,6 +117,7 @@ export function TiendaDataProvider({ children }: { children: ReactNode }) {
       value={{
         resumen,
         productos,
+        umbralStockBajo,
         ordenes,
         mensajes,
         loading,

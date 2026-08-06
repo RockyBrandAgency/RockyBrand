@@ -587,7 +587,7 @@ export interface StoreProduct {
   familia?: string;
   precio_clp: number;
   stock: number;
-  activo?: boolean;
+  activo: boolean;
 }
 
 export type StoreOrderStatus =
