@@ -18,6 +18,7 @@ export default function Sidebar() {
   // esconde algo por un false negativo de carga).
   const showPms = !activeProjectId || activeServices === null || activeServices.pms;
   const showEmailMarketing = !activeProjectId || activeServices === null || activeServices.email_marketing;
+  const showStore = !activeProjectId || activeServices === null || activeServices.store;
 
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
@@ -173,6 +174,11 @@ export default function Sidebar() {
         {showPms && (
           <NavLink to="/pms" className={({ isActive }) => `config-link${isActive ? ' current' : ''}`}>
             <span className="ico">⌂</span> PMS
+          </NavLink>
+        )}
+        {showStore && (
+          <NavLink to="/tienda" className={({ isActive }) => `config-link${isActive ? ' current' : ''}`}>
+            <span className="ico">▤</span> Tienda
           </NavLink>
         )}
         <NavLink to="/thelma-studio" className={({ isActive }) => `config-link${isActive ? ' current' : ''}`}>

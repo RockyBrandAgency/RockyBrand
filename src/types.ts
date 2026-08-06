@@ -6,7 +6,7 @@ export type ToolKey = 'agentes' | 'email-marketing' | 'metricas';
 // controlan qué se ve en el panel, no qué corre de verdad. Este es a nivel
 // de servicio completo (Agentes/PMS/CRM/Email Marketing), no por agente
 // individual (eso lo sigue resolviendo `agents`).
-export type ServiceKey = 'agents' | 'pms' | 'crm' | 'email_marketing';
+export type ServiceKey = 'agents' | 'pms' | 'crm' | 'email_marketing' | 'store';
 export type ClientServices = Record<ServiceKey, boolean>;
 
 // Sub-opciones DENTRO de un servicio (no on/off del servicio completo) -
@@ -571,6 +571,87 @@ export interface ClientMargin {
   paga_usd: number | null;
   margen_usd: number | null;
   margen_pct: number | null;
+}
+
+// ===== Tienda (Chile Fly Fishing Co.) =====
+// Exclusiva de un solo cliente (STORE_CLIENT_ID en el backend) - ver
+// store-admin-api / ARQUITECTURA-TIENDA-CFF.md para el modelo de datos
+// real de `chile-fly-fishing-store-products` / `-orders`. Los nombres de
+// campo siguen exacto lo que escribe store_orders_lambda.py /
+// store_admin_lambda.py, no una convencion inventada en el frontend.
+
+export interface StoreProduct {
+  sku: string;
+  nombre: string;
+  slug?: string;
+  familia?: string;
+  precio_clp: number;
+  stock: number;
+  activo?: boolean;
+}
+
+export type StoreOrderStatus =
+  | 'pendiente_pago'
+  | 'pago_iniciado'
+  | 'pagada'
+  | 'pago_rechazado'
+  | 'pago_anulado'
+  | 'expirada'
+  | 'revision_monto';
+
+export interface StoreOrderItem {
+  sku: string;
+  cantidad: number;
+  nombre: string;
+  precio_unitario_clp?: number;
+  total_linea_clp?: number;
+}
+
+export interface StoreOrderCliente {
+  nombre: string;
+  email: string;
+  telefono: string;
+  direccion: string;
+  comuna: string;
+  region: string;
+  notas?: string;
+}
+
+// Shape completo (detalle_orden) - las listas (listar_ordenes,
+// despachos_pendientes, en_revision_monto) devuelven un subset resumido
+// via _resumen_orden, por eso casi todos los campos ademas de
+// order_id/estado son opcionales aca.
+export interface StoreOrder {
+  order_id: string;
+  estado: StoreOrderStatus;
+  email?: string;
+  cliente?: StoreOrderCliente;
+  items?: StoreOrderItem[];
+  subtotal_clp?: number;
+  despacho_clp?: number | null;
+  despacho_estado?: string;
+  total_clp?: number;
+  pago?: string;
+  webpay_token?: string;
+  created_at?: string;
+  numero_seguimiento?: string | null;
+  despachado_en?: string | null;
+}
+
+export interface StoreContactMessage {
+  order_id: string;
+  tipo: string;
+  estado: string;
+  email: string;
+  cliente: { nombre: string; email: string; asunto: string; mensaje: string };
+  created_at?: string;
+}
+
+export interface StoreDashboardResumen {
+  ventas_semana: { cantidad: number; total_clp: number };
+  riesgo_quiebre_stock: StoreProduct[];
+  despachos_pendientes: StoreOrder[];
+  en_revision_monto: StoreOrder[];
 }
 
 export interface CostsOverview {

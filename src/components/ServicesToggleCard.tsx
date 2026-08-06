@@ -8,9 +8,10 @@ const SERVICE_META: Record<ServiceKey, { label: string; icon: string }> = {
   pms: { label: 'PMS', icon: '⌂' },
   crm: { label: 'CRM', icon: '☎' },
   email_marketing: { label: 'Email Marketing', icon: '✉' },
+  store: { label: 'Tienda', icon: '▤' },
 };
 
-const SERVICE_KEYS: ServiceKey[] = ['agents', 'pms', 'crm', 'email_marketing'];
+const SERVICE_KEYS: ServiceKey[] = ['agents', 'pms', 'crm', 'email_marketing', 'store'];
 
 // Sub-opciones DENTRO de PMS - cada una clickeable solo si `services.pms`
 // está activo (todas dependen del mismo servicio padre hoy; si en el

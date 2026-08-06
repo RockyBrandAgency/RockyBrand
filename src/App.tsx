@@ -30,6 +30,11 @@ import CampanaDetalle from './pages/EmailCrm/CampanaDetalle';
 import Automatizaciones from './pages/EmailCrm/Automatizaciones';
 import Pendientes from './pages/EmailCrm/Pendientes';
 import { ThelmaStudioWorkspace } from './pages/ThelmaStudio/ThelmaStudioWorkspace';
+import TiendaLayout from './pages/Tienda/TiendaLayout';
+import TiendaResumen from './pages/Tienda/TiendaResumen';
+import TiendaProductos from './pages/Tienda/TiendaProductos';
+import TiendaOrdenes from './pages/Tienda/TiendaOrdenes';
+import TiendaContacto from './pages/Tienda/TiendaContacto';
 import Configuraciones from './pages/Configuraciones';
 import UsuariosAcceso from './pages/UsuariosAcceso';
 import Costos from './pages/Costos';
@@ -75,6 +80,12 @@ function AppRoutes() {
             <Route path="vista-mensual" element={<PmsVistaMensual />} />
             <Route path="reservas" element={<PmsReservas />} />
             <Route path="huespedes" element={<PmsHuespedes />} />
+          </Route>
+          <Route path="/tienda" element={<TiendaLayout />}>
+            <Route index element={<TiendaResumen />} />
+            <Route path="catalogo" element={<TiendaProductos />} />
+            <Route path="pedidos" element={<TiendaOrdenes />} />
+            <Route path="contacto" element={<TiendaContacto />} />
           </Route>
           <Route path="/p/:projectId" element={<ProjectLayout />}>
             <Route index element={<ProjectHome />} />
