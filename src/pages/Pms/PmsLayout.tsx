@@ -1,18 +1,20 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { usePanelData } from '../../context/PanelDataContext';
 import { PmsDataProvider, usePmsData } from '../../context/PmsDataContext';
 import { useSlidingIndicator } from '../../hooks/useSlidingIndicator';
 
-// roomOnly: solo tiene sentido para un cliente que usa habitaciones -
-// se oculta cuando `pms_room_views` está apagado (cliente "solo
-// viajeros"). Itinerario/Huéspedes/Reservas ya están centradas en
-// personas, no en habitaciones, así que quedan siempre visibles.
+// roomOnly: se oculta cuando `pms_room_views` esta apagado (cliente "solo
+// viajeros", ej. Chile Fly Fishing - vende viajes guiados, no es un hotel).
+// Solo Reservas y Huespedes quedan siempre visibles: Huespedes no es
+// opcional aunque no sea sobre habitaciones - el formulario de Nueva
+// reserva EXIGE elegir un huesped ya creado (pms_models.Booking en el
+// backend), asi que sin esa pestana no se podria cargar ninguna reserva.
 const TABS = [
-  { to: '.', label: 'Resumen', end: true, roomOnly: false },
+  { to: '.', label: 'Resumen', end: true, roomOnly: true },
   { to: 'calendario', label: 'Calendario', end: false, roomOnly: true },
-  { to: 'itinerario', label: 'Itinerario', end: false, roomOnly: false },
-  { to: 'vista-mensual', label: 'Vista mensual', end: false, roomOnly: false },
+  { to: 'itinerario', label: 'Itinerario', end: false, roomOnly: true },
+  { to: 'vista-mensual', label: 'Vista mensual', end: false, roomOnly: true },
   { to: 'reservas', label: 'Reservas', end: false, roomOnly: false },
   { to: 'huespedes', label: 'Huéspedes', end: false, roomOnly: false },
 ];
@@ -46,6 +48,16 @@ function PmsShell() {
   // pmsFeatures null mientras carga -> se ven todas las tabs (nunca se
   // esconde una vista real por un falso negativo de carga en curso).
   const visibleTabs = TABS.filter((t) => !t.roomOnly || !pmsFeatures || pmsFeatures.pms_room_views);
+
+  // El tabbar solo esconde el LINK - sin esto, un cliente en modo
+  // viajeros que ya tenia abierto (o guardado en favoritos) /pms/calendario
+  // seguiria viendo esa pagina igual, aunque su tab haya desaparecido.
+  useEffect(() => {
+    if (!pmsFeatures || pmsFeatures.pms_room_views) return;
+    const segment = location.pathname.replace(/^\/pms\/?/, '');
+    const currentTab = TABS.find((t) => (t.to === '.' ? segment === '' : segment === t.to));
+    if (currentTab?.roomOnly) navigate('reservas', { replace: true });
+  }, [pmsFeatures, location.pathname, navigate]);
 
   return (
     <div className="main">
