@@ -13,7 +13,12 @@ export const DEFAULTS: Record<AgentKey, AgentConfig> = {
   },
   seo: {
     name: 'Slash',
-    desc: 'Search, Geographic & AI Engine Optimization Expert. El Virtuoso de los Riffs de Destacado. Se asegura de que la banda domine los motores de búsqueda tradicionales (SEO), brille en geolocalización (GEO) y lidere los nuevos motores de respuesta de Inteligencia Artificial (AEO).',
+    // GEO/AEO retirado del nombre y de la descripción el 2026-08-10: el
+    // monitoreo de motores conversacionales era un placeholder de una línea
+    // que devolvía PENDIENTE, nunca se implementó. Decisión de Mato:
+    // no prometerle al cliente algo que el agente no hace. Se puede volver
+    // a agregar el día que exista de verdad.
+    desc: 'Search Engine Optimization Expert. El Virtuoso de los Riffs de Destacado. Se asegura de que la banda domine los motores de búsqueda: qué posiciones se mueven, qué keywords aparecen, y qué ajuste concreto hacer esta semana.',
     avatarUrl: '',
   },
   strategist: {
@@ -46,7 +51,7 @@ export const DEFAULTS: Record<AgentKey, AgentConfig> = {
 export const AGENT_META: Record<AgentKey, { cls: string; initials: string; role: string; short: string }> = {
   ad: { cls: 'ad', initials: 'JI', role: 'Art Director & Visual Concept Creator', short: 'Art Director' },
   an: { cls: 'an', initials: 'NE', role: 'Performance & Data Analytics Specialist', short: 'Analytics' },
-  seo: { cls: 'seo', initials: 'SL', role: 'Search, Geographic & AI Engine Optimization Expert', short: 'SEO / GEO / AEO' },
+  seo: { cls: 'seo', initials: 'SL', role: 'Search Engine Optimization Expert', short: 'SEO' },
   strategist: { cls: 'strategist', initials: 'DA', role: 'Content & Social Media Strategist', short: 'Content Strategist' },
   fm: { cls: 'fm', initials: 'TH', role: 'Director de Montaje y Edición Cinematográfica', short: 'Filmmaker' },
   ri: { cls: 'ri', initials: 'CA', role: 'Market Research & Insight Scout', short: 'Research' },
