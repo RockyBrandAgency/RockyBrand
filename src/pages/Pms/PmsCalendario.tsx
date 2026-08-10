@@ -7,6 +7,9 @@ import type { PmsBooking } from '../../types';
 
 const WINDOW_DAYS = 21;
 const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const MONTHS_ES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -45,6 +48,10 @@ function daysInMonth(iso: string) {
   return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
 }
 
+function isoFromYearMonth(year: number, month: number) {
+  return new Date(year, month, 1).toISOString().slice(0, 10);
+}
+
 export default function PmsCalendario() {
   const { bookings, loading, loadError, roomCatalog } = usePmsData();
   const [view, setView] = useState<'month' | 'timeline'>('month');
@@ -55,6 +62,28 @@ export default function PmsCalendario() {
   const today = todayIso();
 
   const days = useMemo(() => Array.from({ length: WINDOW_DAYS }, (_, i) => addDays(rangeStart, i)), [rangeStart]);
+
+  // Rango de años del selector: siempre incluye hoy ±2, mas cualquier año
+  // que ya tenga una reserva real (llegadas lejanas, ej. CFF reserva con
+  // hasta 650 días de anticipación) - nunca se queda corto por un rango
+  // hardcodeado.
+  const yearOptions = useMemo(() => {
+    const current = new Date().getFullYear();
+    const fromBookings = bookings.flatMap((b) => [Number(b.CheckIn.slice(0, 4)), Number(b.CheckOut.slice(0, 4))]);
+    const all = [current - 1, current, current + 2, ...fromBookings];
+    const min = Math.min(...all);
+    const max = Math.max(...all);
+    return Array.from({ length: max - min + 1 }, (_, i) => min + i);
+  }, [bookings]);
+
+  const activeAnchor = view === 'month' ? monthAnchor : rangeStart;
+  const activeAnchorDate = new Date(`${activeAnchor}T00:00:00`);
+
+  function jumpToYearMonth(year: number, month: number) {
+    const iso = isoFromYearMonth(year, month);
+    setMonthAnchor(startOfMonthIso(iso));
+    setRangeStart(iso);
+  }
 
   const rooms = useMemo(() => {
     if (roomCatalog.length) {
@@ -113,6 +142,31 @@ export default function PmsCalendario() {
           <button className={`btn btn-ghost btn-sm${view === 'timeline' ? ' active' : ''}`} onClick={() => setView('timeline')}>
             Por habitación
           </button>
+        </div>
+
+        <div className="pms-cal-yearmonth">
+          <select
+            aria-label="Mes"
+            value={activeAnchorDate.getMonth()}
+            onChange={(e) => jumpToYearMonth(activeAnchorDate.getFullYear(), Number(e.target.value))}
+          >
+            {MONTHS_ES.map((label, idx) => (
+              <option key={label} value={idx}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Año"
+            value={activeAnchorDate.getFullYear()}
+            onChange={(e) => jumpToYearMonth(Number(e.target.value), activeAnchorDate.getMonth())}
+          >
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
         </div>
 
         {view === 'month' ? (
