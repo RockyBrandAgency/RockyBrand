@@ -11,6 +11,7 @@ export default function NewAddonModal({ bookingId, onClose, onCreated }: { booki
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [guideAssigned, setGuideAssigned] = useState('');
+  const [price, setPrice] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -24,6 +25,7 @@ export default function NewAddonModal({ bookingId, onClose, onCreated }: { booki
     try {
       await createAddon(lodgeId, bookingId, {
         ServiceName: serviceName.trim(),
+        ...(price && { Price: Number(price) }),
         Logistics: {
           OperationBase: operationBase.trim(),
           GuidingZone: guidingZone.trim(),
@@ -76,6 +78,10 @@ export default function NewAddonModal({ bookingId, onClose, onCreated }: { booki
             <label>Guía asignado (opcional)</label>
             <input value={guideAssigned} onChange={(e) => setGuideAssigned(e.target.value)} placeholder="Nombre del guía" />
           </div>
+        </div>
+        <div className="crm-field">
+          <label>Precio (opcional)</label>
+          <input type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Dejar vacío si va incluido en el paquete" />
         </div>
         {error && <div className="login-error" style={{ minHeight: 'auto' }}>{error}</div>}
         <div className="send-actions" style={{ marginTop: 18 }}>

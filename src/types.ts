@@ -424,7 +424,16 @@ export interface PmsBooking {
   CheckOut: string;
   Status: 'CONFIRMED' | 'PENDING' | 'CANCELLED';
   Source: 'Direct' | 'OTA_Headless';
-  Financials: { Currency: string; TotalAmount: number | string; PaymentStatus: 'PAID' | 'PENDING' | 'PARTIAL' | 'REFUNDED' };
+  Financials: {
+    Currency: string;
+    TotalAmount: number | string;
+    // Suma de Price de los add-ons no cancelados de esta reserva - campo
+    // derivado, recalculado server-side (pms_lambda._recompute_addons_total)
+    // cada vez que se agrega un add-on con precio. Optional porque reservas
+    // creadas antes del 2026-08-10 no lo tienen todavia.
+    AddonsAmount?: number | string;
+    PaymentStatus: 'PAID' | 'PENDING' | 'PARTIAL' | 'REFUNDED';
+  };
   PartyMembers: number;
   UpdatedAt: string;
 }
@@ -435,6 +444,10 @@ export interface PmsAddon {
   ServiceName: string;
   Status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
   Logistics: { OperationBase: string; GuidingZone: string; Date: string; Time?: string | null; GuideAssigned?: string | null };
+  // Opcional - muchos add-ons son solo logistica sin cargo aparte (ya
+  // incluidos en el paquete). Cuando SI tiene precio, suma a
+  // Booking.Financials.AddonsAmount.
+  Price?: number | string;
   UpdatedAt: string;
 }
 

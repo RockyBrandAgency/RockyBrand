@@ -16,7 +16,7 @@ const SOURCE_LABEL: Record<string, string> = { Direct: 'Directa', OTA_Headless: 
 const PAYMENT_PILL: Record<string, string> = { PAID: 'paid', PENDING: 'pending-pay', PARTIAL: 'partial', REFUNDED: 'refunded' };
 
 export default function PmsReservas() {
-  const { bookings, loading, loadError, lodgeId, pmsFeatures } = usePmsData();
+  const { bookings, loading, loadError, lodgeId, pmsFeatures, refetch } = usePmsData();
   const roomViews = pmsFeatures ? pmsFeatures.pms_room_views : true;
   const [showNew, setShowNew] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -49,6 +49,10 @@ export default function PmsReservas() {
   async function refreshAddons(bookingId: string) {
     const res = await listAddons(lodgeId, bookingId);
     setAddonsByBooking((prev) => ({ ...prev, [bookingId]: res.addons || [] }));
+    // Un add-on con precio cambia Financials.AddonsAmount de la reserva -
+    // refetch de la lista completa para que la columna Total lo refleje sin
+    // que el staff tenga que recargar la página a mano.
+    await refetch();
   }
 
   return (
@@ -113,7 +117,10 @@ export default function PmsReservas() {
                       <span className={`pill ${PAYMENT_PILL[b.Financials.PaymentStatus] || 'pending-pay'}`}>{b.Financials.PaymentStatus}</span>
                     </td>
                     <td className="tabular">
-                      {Number(b.Financials.TotalAmount).toLocaleString('es-CL')} {b.Financials.Currency}
+                      {(Number(b.Financials.TotalAmount) + Number(b.Financials.AddonsAmount || 0)).toLocaleString('es-CL')} {b.Financials.Currency}
+                      {Number(b.Financials.AddonsAmount || 0) > 0 && (
+                        <div className="cell-sub">+{Number(b.Financials.AddonsAmount).toLocaleString('es-CL')} extras</div>
+                      )}
                     </td>
                     <td>
                       <button
@@ -153,7 +160,14 @@ export default function PmsReservas() {
                             <div className="result-list">
                               {addons.map((a) => (
                                 <div className="result-list-item" key={a.AddonID}>
-                                  <div style={{ color: 'var(--ink)', fontWeight: 700, marginBottom: 6 }}>{a.ServiceName}</div>
+                                  <div style={{ color: 'var(--ink)', fontWeight: 700, marginBottom: 6 }}>
+                                    {a.ServiceName}
+                                    {Number(a.Price || 0) > 0 && (
+                                      <span className="cell-sub" style={{ marginLeft: 8, fontWeight: 400 }}>
+                                        {Number(a.Price).toLocaleString('es-CL')} {b.Financials.Currency}
+                                      </span>
+                                    )}
+                                  </div>
                                   <div className="pms-route">
                                     <span className="pms-route-base">{a.Logistics.OperationBase}</span>
                                     <span className="pms-route-arrow">→</span>

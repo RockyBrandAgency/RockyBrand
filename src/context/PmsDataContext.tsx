@@ -14,6 +14,7 @@ interface PmsDataValue {
   refetch: () => Promise<void>;
   createGuest: (payload: Record<string, unknown>) => Promise<{ GuestID: string }>;
   createBooking: (payload: Record<string, unknown>) => Promise<{ BookingID: string }>;
+  updateBooking: (bookingId: string, patch: Record<string, unknown>) => Promise<{ BookingID: string; message: string }>;
   // Sub-opciones de PMS del lodge activo (pms_room_views, etc) + catálogo
   // curado de habitaciones - null mientras carga o si falló (nunca se
   // esconde una vista real por un falso negativo de carga).
@@ -113,6 +114,15 @@ export function PmsDataProvider({ children }: { children: ReactNode }) {
     [refetch]
   );
 
+  const updateBooking = useCallback(
+    async (bookingId: string, patch: Record<string, unknown>) => {
+      const result = await pmsApi.updateBooking(lodgeIdRef.current, bookingId, patch);
+      await refetch();
+      return result;
+    },
+    [refetch]
+  );
+
   return (
     <PmsDataContext.Provider
       value={{
@@ -125,6 +135,7 @@ export function PmsDataProvider({ children }: { children: ReactNode }) {
         refetch,
         createGuest,
         createBooking,
+        updateBooking,
         pmsFeatures,
         roomCatalog,
       }}
