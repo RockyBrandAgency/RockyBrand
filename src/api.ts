@@ -33,6 +33,12 @@ export class UnauthorizedError extends Error {
   }
 }
 
+// El backend pide confirmar la identidad de nuevo antes de tocar
+// credenciales de un cliente. Es un error distinto de UnauthorizedError
+// a propósito: la sesión sigue siendo válida, lo que falta es la prueba
+// de que quien la está usando es el dueño.
+export class ReauthRequiredError extends Error {}
+
 export async function login(username: string, password: string): Promise<string> {
   const res = await fetch(CONFIG_API_URL, {
     method: 'POST',
@@ -80,9 +86,14 @@ export async function callAction<T = unknown>(action: string, extra?: Record<str
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ __action: action, ...(extra || {}) }),
   });
-  if (res.status === 401) throw new UnauthorizedError();
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((data as { error?: string }).error || 'Error de conexión');
+  const fallo = data as { error?: string; reauth_required?: boolean };
+  // El 401 con reauth_required NO es una sesión caída - no hay que echar al
+  // usuario del panel, hay que pedirle la contraseña. Se revisa antes del
+  // UnauthorizedError justamente por eso.
+  if (fallo.reauth_required) throw new ReauthRequiredError(fallo.error || 'Confirma tu contraseña.');
+  if (res.status === 401) throw new UnauthorizedError();
+  if (!res.ok) throw new Error(fallo.error || 'Error de conexión');
   return data as T;
 }
 
@@ -113,6 +124,62 @@ export async function updateClientPmsFeatures(projectId: string, pmsFeatures: Pa
 
 export async function getClientAlerts(projectId: string): Promise<ClientAlertsResponse> {
   return callAction<ClientAlertsResponse>('get_client_alerts', { project_id: projectId });
+}
+
+// ===== Accesos de los clientes al Executive Dashboard =====
+// Todas requieren sesión de staff, y las que crean/rotan/revocan acceso
+// requieren además la contraseña de quien las ejecuta. El backend valida
+// las dos cosas server-side: esto no es el guardrail, es la interfaz.
+
+export interface ClientUser {
+  username: string;
+  sub: string;
+  email: string;
+  client_id: string;
+  enabled: boolean;
+  status: string;
+  created_at?: string;
+}
+
+export interface ClientOption {
+  client_id: string;
+  nombre: string;
+}
+
+export async function listClientUsers(): Promise<{ users: ClientUser[]; clients: ClientOption[] }> {
+  return callAction<{ users: ClientUser[]; clients: ClientOption[] }>('list_client_users');
+}
+
+/** La clave la genera el servidor y viene UNA sola vez en esta respuesta. */
+export async function createClientUser(
+  clientId: string,
+  email: string,
+  reauthPassword: string
+): Promise<{ email: string; client_id: string; password: string }> {
+  return callAction('create_client_user', { client_id: clientId, email, reauth_password: reauthPassword });
+}
+
+/** Rota la clave y cierra todas las sesiones abiertas de ese usuario. */
+export async function resetClientUserPassword(
+  clientId: string,
+  username: string,
+  reauthPassword: string
+): Promise<{ email: string; client_id: string; password: string }> {
+  return callAction('reset_client_user_password', { client_id: clientId, username, reauth_password: reauthPassword });
+}
+
+export async function setClientUserEnabled(
+  clientId: string,
+  username: string,
+  enabled: boolean,
+  reauthPassword: string
+): Promise<{ email: string; enabled: boolean }> {
+  return callAction('set_client_user_enabled', { client_id: clientId, username, enabled, reauth_password: reauthPassword });
+}
+
+/** Contención rápida: lo echa de todos sus dispositivos sin cambiar la clave. */
+export async function signoutClientUser(clientId: string, username: string): Promise<{ email: string }> {
+  return callAction('signout_client_user', { client_id: clientId, username });
 }
 
 export function formatWhen(iso?: string): string {
