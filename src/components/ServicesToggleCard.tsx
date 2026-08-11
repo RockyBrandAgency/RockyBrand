@@ -9,9 +9,18 @@ const SERVICE_META: Record<ServiceKey, { label: string; icon: string }> = {
   crm: { label: 'CRM', icon: '☎' },
   email_marketing: { label: 'Email Marketing', icon: '✉' },
   store: { label: 'Tienda', icon: '▤' },
+  whatsapp: { label: 'WhatsApp (asistente y avisos)', icon: '✆' },
+  content_approval: { label: 'Aprobación de contenido', icon: '✓' },
 };
 
-const SERVICE_KEYS: ServiceKey[] = ['agents', 'pms', 'crm', 'email_marketing', 'store'];
+// Los dos últimos existían en client-config y los leía el backend
+// (whatsapp_config para el asistente, crm_dashboard_api para aprobaciones),
+// pero no estaban en esta lista. Como el backend armaba el bloque `services`
+// con las claves que salían de acá, mover cualquier toggle las borraba en
+// silencio y dejaba al cliente sin asistente de WhatsApp (2026-08-11).
+const SERVICE_KEYS: ServiceKey[] = [
+  'agents', 'pms', 'crm', 'email_marketing', 'store', 'whatsapp', 'content_approval',
+];
 
 // Sub-opciones DENTRO de PMS - cada una clickeable solo si `services.pms`
 // está activo (todas dependen del mismo servicio padre hoy; si en el

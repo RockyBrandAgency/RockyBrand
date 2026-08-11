@@ -6,7 +6,15 @@ export type ToolKey = 'agentes' | 'email-marketing' | 'metricas';
 // controlan qué se ve en el panel, no qué corre de verdad. Este es a nivel
 // de servicio completo (Agentes/PMS/CRM/Email Marketing), no por agente
 // individual (eso lo sigue resolviendo `agents`).
-export type ServiceKey = 'agents' | 'pms' | 'crm' | 'email_marketing' | 'store';
+// `whatsapp` y `content_approval` faltaban acá, y no era cosmético: el
+// backend reconstruía el bloque `services` a partir de las claves que esta
+// pantalla le mandaba, así que mover CUALQUIER toggle borraba las dos
+// (2026-08-11). Borrar `whatsapp` deja al cliente sin asistente y el webhook
+// empieza a devolver 403. El backend ya no borra lo que no conoce, pero
+// además tienen que verse acá para poder administrarlas.
+export type ServiceKey =
+  | 'agents' | 'pms' | 'crm' | 'email_marketing' | 'store'
+  | 'whatsapp' | 'content_approval';
 export type ClientServices = Record<ServiceKey, boolean>;
 
 // Sub-opciones DENTRO de un servicio (no on/off del servicio completo) -
