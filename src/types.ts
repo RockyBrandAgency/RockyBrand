@@ -701,3 +701,75 @@ export interface CostsOverview {
     invocacion: string;
   } | null;
 }
+
+// ===== Aprobaciones: estrategia de Rox y calendario semanal de Dave =====
+//
+// Los dos son el mismo patrón con distinto contenido: el agente propone, un
+// humano aprueba, y hasta que aprueba NADA aguas abajo lo consume. Por eso
+// viven en la misma pantalla.
+
+export interface MandatoDeAgente {
+  directiva: string;
+  hipotesis: string;
+  criterio_verificacion: string;
+}
+
+export interface BalanceEstrategia {
+  que_mandate: string;
+  que_hipotesis_plantee?: string;
+  que_dice_neil_que_paso: string;
+  que_sostengo: string;
+  que_corrijo: string;
+}
+
+export interface EstrategiaRox {
+  client_id?: string;
+  updated_at: string;
+  balance_estrategia_anterior: BalanceEstrategia;
+  estrategia_sin_objetivos_confirmados?: string | boolean;
+  brand_os: {
+    north_star_statement: string;
+    voice_and_vibe: { tone?: string; prohibited_words?: string[]; mandatory_attributes?: string[] };
+  };
+  // Los mandatos VIEJOS son texto plano. Los nuevos son objeto con hipótesis
+  // y criterio. Conviven a propósito: las estrategias ya guardadas traen la
+  // forma vieja y el panel tiene que poder mostrarlas igual.
+  agent_mandates: Record<string, MandatoDeAgente | string>;
+  data_gaps?: string[];
+}
+
+export interface StrategyPendienteResponse {
+  hay_pendiente: boolean;
+  pendiente: EstrategiaRox | null;
+  pendiente_generada_at?: string | null;
+  vigente: EstrategiaRox | null;
+  vigente_generada_at?: string | null;
+}
+
+export interface PiezaDeCalendario {
+  fecha: string;
+  dia_sugerido?: string;
+  concepto?: string;
+  objetivo?: string;
+  pilar?: string;
+  pilar_del_mandato?: string;
+  cumple_mandato_de_rox?: string;
+  insights_usados?: string[];
+  insights_descartados_y_por_que?: string;
+  dia_y_hora_propuestos?: { dia?: string; hora?: string; base?: string };
+  adaptaciones?: Array<{ plataforma?: string; formato?: string; headline?: string; cuerpo?: string; cta?: string }>;
+}
+
+export interface CalendarioSemanal {
+  semana_desde: string;
+  semana_hasta: string;
+  pilares_de_la_semana: string[];
+  por_que_esta_distribucion: string;
+  piezas: PiezaDeCalendario[];
+}
+
+export interface CalendarioPendienteResponse {
+  hay_pendiente: boolean;
+  calendario: CalendarioSemanal | null;
+  generado_at?: string | null;
+}

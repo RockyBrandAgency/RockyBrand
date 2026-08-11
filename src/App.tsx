@@ -18,6 +18,7 @@ import Metricas from './pages/Metricas';
 import GastosCliente from './pages/GastosCliente';
 import ConfiguracionCliente from './pages/ConfiguracionCliente';
 import Agentes from './pages/Agentes';
+import Aprobaciones from './pages/Aprobaciones';
 import AgentDetail from './pages/AgentDetail';
 import EmailCrmLayout from './pages/EmailCrm/EmailCrmLayout';
 import Resumen from './pages/EmailCrm/Resumen';
@@ -59,6 +60,7 @@ function AppRoutes() {
           <Route path="/usuarios-acceso" element={<UsuariosAcceso />} />
           <Route path="/costos" element={<Costos />} />
           <Route path="/agentes" element={<Agentes />} />
+          <Route path="/aprobaciones" element={<Aprobaciones />} />
           <Route path="/agentes/:key" element={<AgentDetail />} />
           <Route path="/email-marketing" element={<EmailCrmLayout />}>
             <Route index element={<Resumen />} />

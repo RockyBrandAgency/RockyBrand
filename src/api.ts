@@ -1,4 +1,7 @@
-import type { ClientAlertsResponse, ClientServices, CostsOverview, PmsFeatures, RoomCatalogEntry } from './types';
+import type { ClientAlertsResponse, ClientServices, CostsOverview, PmsFeatures, RoomCatalogEntry,
+  StrategyPendienteResponse,
+  CalendarioPendienteResponse,
+} from './types';
 
 const CONFIG_API_URL = 'https://1gfa1uwd8i.execute-api.us-east-2.amazonaws.com/config';
 const TOKEN_STORAGE_KEY = 'rockybrandPanelToken';
@@ -266,4 +269,39 @@ export async function saveClientRevenue(
 /** Cuesta USD 0,01 (una consulta a Cost Explorer). Confirmar con el usuario antes. */
 export async function refreshCostsNow(): Promise<{ ok: boolean; costo_estimado_usd: number; nota: string }> {
   return callAction('refresh_costs_now');
+}
+
+// ===== Aprobaciones de Rox y de Dave =====
+//
+// El gate existe porque un error de Rox sesga a cinco agentes por un mes:
+// revisar una estrategia cuesta cinco minutos y evita corregir treinta
+// piezas nacidas de una estrategia equivocada. Mientras algo espera
+// aprobación, los agentes siguen con lo anterior — nadie se bloquea.
+
+export async function getStrategyPendiente(projectId: string): Promise<StrategyPendienteResponse> {
+  return callAction<StrategyPendienteResponse>('get_strategy_pendiente', { project_id: projectId });
+}
+
+export async function aprobarEstrategia(projectId: string): Promise<{ ok: boolean; aprobada_at: string }> {
+  return callAction('aprobar_estrategia', { project_id: projectId });
+}
+
+/** El motivo es obligatorio y lo valida el backend: sin él Rox no tiene con qué corregir. */
+export async function rechazarEstrategia(projectId: string, motivo: string): Promise<{ ok: boolean }> {
+  return callAction('rechazar_estrategia', { project_id: projectId, motivo });
+}
+
+export async function getCalendarioPendiente(projectId: string): Promise<CalendarioPendienteResponse> {
+  return callAction<CalendarioPendienteResponse>('get_calendario_pendiente', { project_id: projectId });
+}
+
+/** Aprobar la estructura crea las piezas para revisión una por una. */
+export async function aprobarCalendario(
+  projectId: string
+): Promise<{ ok: boolean; piezas_solicitadas: boolean; nota: string }> {
+  return callAction('aprobar_calendario', { project_id: projectId });
+}
+
+export async function rechazarCalendario(projectId: string, motivo: string): Promise<{ ok: boolean }> {
+  return callAction('rechazar_calendario', { project_id: projectId, motivo });
 }
