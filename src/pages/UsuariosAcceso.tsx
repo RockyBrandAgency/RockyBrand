@@ -501,7 +501,7 @@ export default function UsuariosAcceso() {
               <tr key={`${ev.user_sub}#${ev.ts}`}>
                 <td className="tabular">{formatWhen(ev.ts.split('#')[0])}</td>
                 <td>
-                  <span className={`pill ${EVENTOS_DE_ALERTA.includes(ev.event_type) ? 'unsubscribed' : 'subscribed'}`}>
+                  <span className={`pill ${EVENTOS_DE_ALERTA.includes(ev.event_type) ? 'alerta' : 'subscribed'}`}>
                     <span className="pill-dot" />
                     {EVENT_LABEL[ev.event_type] || ev.event_type}
                   </span>

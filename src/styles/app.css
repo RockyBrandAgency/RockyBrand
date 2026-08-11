@@ -369,6 +369,17 @@ tbody tr:hover{ background:rgba(255,255,255,0.02); }
 .pill.draft .pill-dot, .pill.unsubscribed .pill-dot{ background:var(--dim); }
 .pill.bounced{ background:rgba(192,80,58,0.15); color:var(--err); }
 .pill.bounced .pill-dot{ background:var(--err); }
+/* Eventos de riesgo en la auditoría de accesos: intento de ingreso fallido,
+   confirmación de contraseña fallida, acción sobre un cliente rechazada.
+   Antes usaban .unsubscribed, que es beige apagado y se leía como un estado
+   neutro más - indistinguible de un ingreso normal justo en la tabla donde
+   un intento indebido tiene que saltar a la vista.
+   No reusa .bounced a propósito: --err (#c0503a) da 3,6:1 sobre el fondo de
+   la tabla y estas pills son de 10px, o sea por debajo del 4,5:1 que pide
+   AA para texto chico. #e07856 - el mismo tono que ya usa .login-error en
+   este panel, no un color nuevo - da 5,6:1. */
+.pill.alerta{ background:rgba(224,120,86,0.15); color:#e07856; }
+.pill.alerta .pill-dot{ background:#e07856; }
 .tag{ font-size:10px; color:var(--dust); background:rgba(94,117,131,0.15); padding:3px 9px; border-radius:6px; margin-right:4px; display:inline-block; font-weight:600; }
 
 .crm-toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:12px; flex-wrap:wrap; }
