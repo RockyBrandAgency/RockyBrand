@@ -166,6 +166,7 @@ export interface CampaignRecipient {
   clicked_at?: string;
   clicked_links?: string[];
   bounced: boolean;
+  complained?: boolean;
 }
 
 export interface EmailJourney {

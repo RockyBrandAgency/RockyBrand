@@ -5,6 +5,40 @@ import { formatWhen } from '../../api';
 import { statusLabel } from './crmUtils';
 import type { CampaignRecipient, EmailCampaign } from '../../types';
 
+/** Fecha y hora completas. `formatWhen` corta el año, y en una campaña
+ *  enviada lo primero que se pregunta es "¿cuándo salió exactamente?". */
+function formatWhenFull(iso?: string): string {
+  if (!iso) return '';
+  try {
+    const withZone = /[zZ+-]\d{0,2}:?\d{0,2}$/.test(iso) ? iso : iso + 'Z';
+    const d = new Date(withZone);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleString('es-CL', {
+      day: '2-digit', month: 'long', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
+}
+
+/** A qué base se mandó, en palabras. El segmento se guarda como
+ *  `{type: 'tag', value: 'x'}`, que no significa nada para quien lee. */
+function describirBase(segment?: { type: string; value?: string }): string {
+  if (!segment || segment.type === 'all') return 'Toda la base suscrita';
+  if (segment.type === 'tag') return `Contactos con la etiqueta "${segment.value}"`;
+  return segment.value || segment.type;
+}
+
+function Fila({ etiqueta, children }: { etiqueta: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', gap: 16, padding: '9px 0', borderBottom: '1px solid var(--line)' }}>
+      <div style={{ minWidth: 150, opacity: 0.62, fontSize: 13 }}>{etiqueta}</div>
+      <div style={{ flex: 1, fontSize: 14 }}>{children}</div>
+    </div>
+  );
+}
+
 export default function CampanaDetalle() {
   const { campaignId } = useParams<{ campaignId: string }>();
   const { scopedAction } = useCrmData();
@@ -13,6 +47,7 @@ export default function CampanaDetalle() {
   const [recipients, setRecipients] = useState<CampaignRecipient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [verPrevia, setVerPrevia] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,9 +74,11 @@ export default function CampanaDetalle() {
   if (error || !campaign) return <div className="empty-state">{error || 'Campaña no encontrada'}</div>;
 
   const s = campaign.stats || { enviados: 0, aperturas: 0, clics: 0, rebotes: 0, quejas: 0 };
-  const clickRate = s.enviados ? ((s.clics / s.enviados) * 100).toFixed(1) : '0.0';
-  const openRate = s.enviados ? ((s.aperturas / s.enviados) * 100).toFixed(1) : '0.0';
-  const bounceRate = s.enviados ? ((s.rebotes / s.enviados) * 100).toFixed(1) : '0.0';
+  const pct = (n: number) => (s.enviados ? ((n / s.enviados) * 100).toFixed(1) : '0.0');
+  const clickRate = pct(s.clics);
+  const openRate = pct(s.aperturas);
+  const bounceRate = pct(s.rebotes);
+  const enviadoEl = campaign.sent_at || campaign.scheduled_at || '';
 
   return (
     <div>
@@ -56,6 +93,57 @@ export default function CampanaDetalle() {
           <span className="pill-dot" />
           {statusLabel(campaign.status)}
         </span>
+      </div>
+
+      {/* Ficha del envío: lo que hay que poder responder sin salir de acá. */}
+      <div className="card" style={{ padding: '18px 20px', marginTop: 18 }}>
+        <div className="desc-label" style={{ marginBottom: 6 }}>Detalle del envío</div>
+        <Fila etiqueta="Asunto">{campaign.subject || '—'}</Fila>
+        <Fila etiqueta={campaign.status === 'sent' ? 'Enviada el' : 'Programada para'}>
+          {enviadoEl ? formatWhenFull(enviadoEl) : 'Todavía no se ha enviado'}
+        </Fila>
+        <Fila etiqueta="Base">
+          {describirBase(campaign.segment)}
+          {s.enviados ? ` · ${s.enviados} destinatarios` : ''}
+        </Fila>
+        <Fila etiqueta="Creada el">{formatWhenFull(campaign.created_at) || '—'}</Fila>
+        <div style={{ display: 'flex', gap: 16, padding: '9px 0' }}>
+          <div style={{ minWidth: 150, opacity: 0.62, fontSize: 13 }}>Contenido</div>
+          <div style={{ flex: 1 }}>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => setVerPrevia((v) => !v)}
+              disabled={!campaign.html_body}
+            >
+              {verPrevia ? 'Ocultar vista previa' : 'Ver vista previa del email'}
+            </button>
+            {!campaign.html_body && (
+              <span style={{ marginLeft: 10, opacity: 0.6, fontSize: 13 }}>
+                Esta campaña no tiene contenido guardado.
+              </span>
+            )}
+          </div>
+        </div>
+
+        {verPrevia && campaign.html_body && (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ opacity: 0.62, fontSize: 12, marginBottom: 8 }}>
+              Es el correo exacto que se envió, tal como salió de la plataforma.
+            </div>
+            {/* sandbox vacío: el HTML de una campaña es contenido, no código.
+                Sin esto, un template pegado desde afuera correría scripts
+                dentro del panel. */}
+            <iframe
+              title="Vista previa del email"
+              srcDoc={campaign.html_body}
+              sandbox=""
+              style={{
+                width: '100%', height: 620, border: '1px solid var(--line)',
+                borderRadius: 8, background: '#fff',
+              }}
+            />
+          </div>
+        )}
       </div>
 
       <div className="mini-dash" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
@@ -106,11 +194,19 @@ export default function CampanaDetalle() {
                 .sort((a, b) => (a.contact_email || '').localeCompare(b.contact_email || ''))
                 .map((r) => (
                   <tr key={r.contact_email}>
-                    <td className="cell-name">{r.contact_email}</td>
+                    <td className="cell-name">{r.contact_email || '—'}</td>
                     <td className="tabular">{formatWhen(r.sent_at) || '—'}</td>
                     <td className="tabular">{r.opened ? formatWhen(r.opened_at) || 'Sí' : '—'}</td>
                     <td className="tabular">{r.clicked ? formatWhen(r.clicked_at) || 'Sí' : '—'}</td>
-                    <td>{r.clicked_links?.length ? r.clicked_links.join(', ') : '—'}</td>
+                    <td>
+                      {r.clicked_links?.length ? (
+                        <span title={r.clicked_links.join('\n')}>
+                          {r.clicked_links.length === 1
+                            ? r.clicked_links[0]
+                            : `${r.clicked_links.length} enlaces`}
+                        </span>
+                      ) : '—'}
+                    </td>
                     <td className="tabular">{r.bounced ? 'Sí' : '—'}</td>
                   </tr>
                 ))}
