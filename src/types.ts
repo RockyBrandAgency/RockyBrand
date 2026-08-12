@@ -153,7 +153,7 @@ export interface EmailCampaign {
   status: 'draft' | 'scheduled' | 'sending' | 'sent';
   created_at: string;
   scheduled_at?: string;
-  sent_at: string;
+  sent_at?: string;
   stats: CampaignStats;
 }
 
@@ -235,7 +235,7 @@ export interface HomeSummary {
 
 export interface MetricsEmailCampaign {
   name: string;
-  sent_at: string;
+  sent_at?: string;
   enviados: number;
   aperturas: number;
 }
