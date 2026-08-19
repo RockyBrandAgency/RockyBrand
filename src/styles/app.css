@@ -223,11 +223,9 @@
    Sin transform en el hover - la state layer se encarga. */
 .back-link{ display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:40px; padding:0 12px; margin-left:-12px; margin-bottom:26px; color:var(--accent); font-size:14px; font-weight:500; letter-spacing:0.1px; line-height:20px; cursor:pointer; background:none; border:none; border-radius:999px; }
 
-.enter-agent-btn{ transition:background .15s, color .15s, transform .15s; }
-.enter-agent-btn:hover{ transform:translateY(-1px); }
-.enter-agent-btn:active{ transform:translateY(0) scale(0.96); }
+.enter-agent-btn{ transition:background-color .15s ease, border-color .15s ease, color .15s ease; }
 
-.icon-btn{ transition:color .15s, border-color .15s, transform .15s; }
+.icon-btn{ transition:color .15s ease; }
 
 @media (prefers-reduced-motion: reduce){
   /* Los botones ya no se desplazan ni escalan en ningun caso (M3), asi que
@@ -331,7 +329,6 @@
 .agent-detail{ font-size:12.5px; color:var(--dim); line-height:1.65; border-top:1px solid var(--line); padding-top:13px; font-weight:500; }
 .week-summary-text{ font-size:12.5px; color:var(--dim); line-height:1.65; font-weight:500; }
 .enter-agent-btn{ align-self:flex-start; margin-top:2px; }  /* bloque M3 (Outlined) */
-.enter-agent-btn:hover{ background:var(--accent); color:var(--accent-ink); }
 .footnote{ font-size:11.5px; color:var(--dim-2); line-height:1.7; max-width:660px; border-top:1px solid var(--line); padding-top:20px; font-weight:500; }
 
 /* ===== Configuración ===== */
@@ -343,8 +340,9 @@
 .config-project-name{ font-size:16px; font-weight:800; letter-spacing:-0.01em; }
 .config-project-id{ font-size:11px; color:var(--dim-2); margin-top:2px; }
 .config-chip-row{ display:flex; flex-wrap:wrap; gap:8px; }
-.config-chip{ display:inline-flex; align-items:center; gap:7px; padding:7px 12px; border-radius:20px; border:1px solid var(--line); background:rgba(255,255,255,0.02); color:var(--dim); font-size:11.5px; font-weight:600; cursor:pointer; transition:border-color .15s, color .15s, background .15s; }
-.config-chip.selected{ border-color:var(--accent); color:var(--accent); background:rgba(202,150,0,0.08); }
+.config-chip{ box-sizing:border-box; display:inline-flex; align-items:center; gap:8px; min-height:32px; padding:0 16px; border-radius:8px; border:1px solid var(--line); background:transparent; color:var(--dim); font-family:inherit; font-size:14px; font-weight:500; letter-spacing:0.1px; line-height:20px; cursor:pointer; transition:border-color .15s ease, color .15s ease, background-color .15s ease; }
+.config-chip.selected{ border-color:transparent; color:var(--accent); background:color-mix(in srgb, var(--accent) 20%, var(--panel)); }
+.config-chip:disabled{ border-color:color-mix(in srgb, var(--ink) 12%, transparent); color:color-mix(in srgb, var(--ink) 38%, transparent); }
 .config-chip .avatar{ flex-shrink:0; }
 
 /* ===== Agent detail page ===== */
@@ -418,12 +416,15 @@
 
 /* ===== CRM ===== */
 .tabbar{ position:relative; display:flex; gap:2px; margin:26px 0 28px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
-.tab{ padding:11px 16px; font-size:12.5px; color:var(--dim); cursor:pointer; border-bottom:2px solid transparent; user-select:none; font-weight:600; background:none; border-top:none; border-left:none; border-right:none; transition:color .15s; }
+/* Primary tabs de M3: alto 48px, label-large, indicador de 3px. El hover no
+   pinta un fondo propio - lo pone la state layer de buttonHoverGsap.ts, igual
+   que en los botones. */
+.tab{ display:inline-flex; align-items:center; justify-content:center; position:relative; min-height:48px; padding:0 16px; font-size:14px; font-weight:500; letter-spacing:0.1px; line-height:20px; color:var(--dim); cursor:pointer; border:none; background:none; user-select:none; transition:color .15s ease; }
 .tab:hover{ color:var(--ink); }
-.tab.active{ color:var(--ink); }
+.tab.active{ color:var(--accent); }
 
 .slide-indicator{ position:absolute; opacity:0; pointer-events:none; }
-.slide-indicator-h{ left:0; bottom:-1px; height:2px; background:var(--accent); border-radius:2px 2px 0 0; }
+.slide-indicator-h{ left:0; bottom:-1px; height:3px; background:var(--accent); border-radius:3px 3px 0 0; }
 .slide-indicator-v{ left:0; top:0; width:100%; border-radius:7px; background:rgba(202,150,0,0.1); z-index:0; }
 
 table{ width:100%; border-collapse:collapse; }
@@ -473,8 +474,8 @@ td.cell-enlace{ max-width:240px; overflow:hidden; text-overflow:ellipsis; white-
 /* Icon button de M3 (tamano small): 32px, circular, sin contenedor en
    reposo. La state layer del hover se recorta sola con el border-radius. */
 .icon-btn{ width:32px; height:32px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; color:var(--dim); cursor:pointer; background:transparent; border:none; font-size:13px; }
-.icon-btn:hover{ color:var(--ink); border-color:var(--dim-2); }
-.icon-btn.danger:hover{ color:var(--err); border-color:var(--err); }
+.icon-btn:hover{ color:var(--ink); }
+.icon-btn.danger:hover{ color:var(--err); }
 
 .form-section{ padding:21px 23px; margin-bottom:18px; max-width:740px; }
 .form-section-title{ font-size:14.5px; font-weight:800; margin-bottom:5px; }
@@ -522,10 +523,10 @@ td.cell-enlace{ max-width:240px; overflow:hidden; text-overflow:ellipsis; white-
 /* ===== Métricas ===== */
 .metrics-toolbar{ display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap; }
 .metrics-actions{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:2px; }
-.range-pills{ display:flex; gap:2px; background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:3px; }
-.range-pill{ font-size:11.5px; font-weight:600; color:var(--dim); background:none; border:none; border-radius:6px; padding:7px 13px; cursor:pointer; transition:background .15s, color .15s; }
-.range-pill:hover{ color:var(--ink); }
-.range-pill.active{ background:var(--accent); color:var(--accent-ink); }
+.range-pills{ display:inline-flex; background:transparent; border:1px solid var(--line); border-radius:999px; padding:0; overflow:hidden; }
+.range-pill{ box-sizing:border-box; min-height:40px; padding:0 16px; font-family:inherit; font-size:14px; font-weight:500; letter-spacing:0.1px; line-height:20px; color:var(--ink); background:none; border:none; border-left:1px solid var(--line); cursor:pointer; transition:background-color .15s ease, color .15s ease; }
+.range-pill:first-child{ border-left:none; }
+.range-pill.active{ background:color-mix(in srgb, var(--accent) 20%, var(--panel)); color:var(--accent); }
 
 /* ===== PageHeader compartido (Figma "Dashboard": logo grande + estado + tabs) ===== */
 .page-header{ display:flex; align-items:center; gap:18px; padding:10px 0 22px; }
@@ -537,8 +538,7 @@ td.cell-enlace{ max-width:240px; overflow:hidden; text-overflow:ellipsis; white-
 .page-header-date{ font-size:12.5px; color:var(--dim-2); font-weight:600; margin-top:5px; }
 .page-header-right{ display:flex; align-items:center; gap:14px; flex-shrink:0; position:relative; }
 
-.sys-pill-clickable{ cursor:pointer; border:none; transition:opacity .15s, transform .15s; }
-.sys-pill-clickable:hover{ opacity:0.85; transform:translateY(-1px); }
+.sys-pill-clickable{ cursor:pointer; border:none; transition:opacity .15s ease; }
 
 .page-header-bell-wrap{ position:relative; }
 .page-header-bell{ position:relative; display:inline-flex; color:var(--dim-2); background:none; border:none; cursor:pointer; padding:4px; transition:color .15s; }
