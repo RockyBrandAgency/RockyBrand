@@ -12,9 +12,13 @@ export type ToolKey = 'agentes' | 'email-marketing' | 'metricas';
 // (2026-08-11). Borrar `whatsapp` deja al cliente sin asistente y el webhook
 // empieza a devolver 403. El backend ya no borra lo que no conoce, pero
 // además tienen que verse acá para poder administrarlas.
+// 'agencias' (portal B2B, 2026-08-12) existía en el backend (agent_core
+// `_SERVICIOS_OPT_IN`) y lo lee el sidebar del panel del cliente, pero no
+// estaba acá: no había forma de contratárselo a nadie desde el panel de
+// staff. Entra el 2026-08-19 con el resto de las funcionalidades.
 export type ServiceKey =
   | 'agents' | 'pms' | 'crm' | 'email_marketing' | 'store'
-  | 'whatsapp' | 'content_approval';
+  | 'whatsapp' | 'content_approval' | 'agencias';
 export type ClientServices = Record<ServiceKey, boolean>;
 
 // Sub-opciones DENTRO de un servicio (no on/off del servicio completo) -
@@ -27,8 +31,24 @@ export type ClientServices = Record<ServiceKey, boolean>;
 //   Calendario/Disponibilidad, quedándose con Itinerario/Huéspedes/
 //   Reservas (ya centradas en personas, no en habitaciones). Default
 //   true - preserva a los clientes que ya usan habitaciones hoy.
-export type PmsFeatureKey = 'pms_monthly_view' | 'pms_room_views';
+// Las 5 primeras son las PANTALLAS del PMS multi-cliente tal como las lista
+// 06-dashboard-web/src/screens.ts. Todas default true en el backend: hoy las
+// ve cualquier cliente con `services.pms`, así que apagar una es una decisión
+// explícita desde acá. El registro vive en 04-codigo/client_features.py — si
+// se agrega una clave allá, agregarla acá también o el panel no la muestra.
+export type PmsFeatureKey =
+  | 'pms_resumen' | 'pms_reservas' | 'pms_huespedes' | 'pms_itinerarios'
+  | 'pms_housekeeping' | 'pms_monthly_view' | 'pms_room_views';
 export type PmsFeatures = Record<PmsFeatureKey, boolean>;
+
+// Las 8 pestañas de la plataforma de Email Marketing que ve el cliente
+// (06-dashboard-web/src/pages/Servicios/EmailCampanas.tsx, TABS).
+export type EmailFeatureKey =
+  | 'email_resumen' | 'email_pendientes' | 'email_campanas' | 'email_nueva_campana'
+  | 'email_audiencias' | 'email_templates' | 'email_metricas' | 'email_automatizaciones';
+
+export type FeatureKey = PmsFeatureKey | EmailFeatureKey;
+export type ClientFeatures = Record<FeatureKey, boolean>;
 
 // Catálogo curado de habitaciones (reemplaza el diccionario hardcodeado
 // que vivía en pmsRooms.ts) - opcional, si el cliente no lo tiene

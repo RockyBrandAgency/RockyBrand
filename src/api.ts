@@ -1,4 +1,4 @@
-import type { ClientAlertsResponse, ClientServices, CostsOverview, PmsFeatures, RoomCatalogEntry,
+import type { ClientAlertsResponse, ClientFeatures, ClientServices, CostsOverview, PmsFeatures, RoomCatalogEntry,
   StrategyPendienteResponse,
   CalendarioPendienteResponse,
 } from './types';
@@ -102,12 +102,28 @@ export async function callAction<T = unknown>(action: string, extra?: Record<str
 
 export async function getClientServices(
   projectId: string
-): Promise<{ services: ClientServices; pmsFeatures: PmsFeatures; roomCatalog: RoomCatalogEntry[] }> {
-  const data = await callAction<{ services: ClientServices; pms_features: PmsFeatures; room_catalog: RoomCatalogEntry[] }>(
-    'get_client_services',
-    { project_id: projectId }
-  );
-  return { services: data.services, pmsFeatures: data.pms_features, roomCatalog: data.room_catalog ?? [] };
+): Promise<{
+  services: ClientServices;
+  pmsFeatures: PmsFeatures;
+  // null cuando la Lambda desplegada es anterior al 2026-08-19 y todavia
+  // no manda `features`. Se distingue de "todas apagadas" a proposito: la
+  // pantalla de configuracion avisa que falta desplegar en vez de pintar
+  // switches que al tocarlos devolverian 400 por clave desconocida.
+  features: ClientFeatures | null;
+  roomCatalog: RoomCatalogEntry[];
+}> {
+  const data = await callAction<{
+    services: ClientServices;
+    pms_features: PmsFeatures;
+    features?: ClientFeatures;
+    room_catalog: RoomCatalogEntry[];
+  }>('get_client_services', { project_id: projectId });
+  return {
+    services: data.services,
+    pmsFeatures: data.pms_features,
+    features: data.features ?? null,
+    roomCatalog: data.room_catalog ?? [],
+  };
 }
 
 // Requiere sesión de staff (rockybrand-staff) - el backend lo vuelve a
@@ -117,12 +133,21 @@ export async function updateClientServices(projectId: string, services: Partial<
   return data.services;
 }
 
-// Sub-opción DENTRO de PMS (no on/off del servicio completo) - misma
-// acción de backend que updateClientServices, con pms_features en vez de
-// services en el body.
-export async function updateClientPmsFeatures(projectId: string, pmsFeatures: Partial<PmsFeatures>): Promise<PmsFeatures> {
-  const data = await callAction<{ pms_features: PmsFeatures }>('update_client_services', { project_id: projectId, pms_features: pmsFeatures });
-  return data.pms_features;
+// Sub-opción DENTRO de un servicio (no on/off del servicio completo) -
+// misma acción de backend que updateClientServices, con `features` en vez
+// de `services` en el body. Cubre tanto las pantallas del PMS como las
+// pestañas de Email Marketing: para el backend son la misma clase de
+// bandera (campo plano en client-config), y tener un solo endpoint evita
+// que una de las dos se quede sin validar.
+export async function updateClientFeatures(
+  projectId: string,
+  features: Partial<ClientFeatures>
+): Promise<ClientFeatures> {
+  const data = await callAction<{ features: ClientFeatures }>('update_client_services', {
+    project_id: projectId,
+    features,
+  });
+  return data.features;
 }
 
 export async function getClientAlerts(projectId: string): Promise<ClientAlertsResponse> {
