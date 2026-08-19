@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PanelDataProvider } from './context/PanelDataContext';
 import Login from './pages/Login';
+import { initButtonHoverGsap } from './lib/buttonHoverGsap';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Reportes from './pages/Reportes';
@@ -103,6 +105,12 @@ function AppRoutes() {
 }
 
 export default function App() {
+  // Hover/pressed de Material 3 para TODOS los <button> del panel, por
+  // delegacion en document: un boton nuevo en cualquier pantalla futura lo
+  // hereda sin tocar nada. Va en la raiz y no en Layout porque el Login
+  // queda fuera de Layout y sus botones tambien son botones.
+  useEffect(() => initButtonHoverGsap(), []);
+
   return (
     <BrowserRouter>
       <AuthProvider>

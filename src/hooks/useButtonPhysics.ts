@@ -5,18 +5,17 @@ import gsap from 'gsap';
 // para agregar la física de "press" en vez de repetirla componente por
 // componente. Si se agrega un botón nuevo con una de estas clases, ya
 // hereda la interacción sin código extra.
+// 2026-08-19: SALIERON LOS BOTONES. Los <button> pasaron a Material Design 3
+// y en M3 el estado "pressed" es una state layer al 10% del color del label,
+// no un desplazamiento ni una escala - de eso se encarga ahora
+// lib/buttonHoverGsap.ts, por delegacion, para todos a la vez. Acá quedan
+// solo los que NO son botones de M3: chips y items de navegacion del
+// sidebar, que conservan su fisica.
 const PRESSABLE_SELECTOR = [
-  '.btn',
   '.config-chip',
   '.tool-chip',
   '.agent-chip',
-  '.mini-card-cta',
-  '.enter-agent-btn',
-  '.welcome-project-btn',
-  '.icon-btn',
   '.range-pill',
-  '.manual-invoke-btn',
-  '.login-btn',
   '.proj-item',
   '.add-project',
 ].join(', ');
