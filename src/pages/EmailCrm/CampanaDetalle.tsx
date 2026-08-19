@@ -184,8 +184,8 @@ export default function CampanaDetalle() {
                 <th>Enviado</th>
                 <th>Apertura</th>
                 <th>Clic</th>
-                <th>Links clickeados</th>
-                <th>Rebotó</th>
+                <th>Enlaces</th>
+                <th>Resultado</th>
               </tr>
             </thead>
             <tbody>
@@ -195,10 +195,10 @@ export default function CampanaDetalle() {
                 .map((r) => (
                   <tr key={r.contact_email}>
                     <td className="cell-name">{r.contact_email || '—'}</td>
-                    <td className="tabular">{formatWhen(r.sent_at) || '—'}</td>
-                    <td className="tabular">{r.opened ? formatWhen(r.opened_at) || 'Sí' : '—'}</td>
-                    <td className="tabular">{r.clicked ? formatWhen(r.clicked_at) || 'Sí' : '—'}</td>
-                    <td>
+                    <td className="tabular cell-fecha">{formatWhen(r.sent_at) || '—'}</td>
+                    <td className="tabular cell-fecha">{r.opened ? formatWhen(r.opened_at) || 'Sí' : '—'}</td>
+                    <td className="tabular cell-fecha">{r.clicked ? formatWhen(r.clicked_at) || 'Sí' : '—'}</td>
+                    <td className="cell-enlace">
                       {r.clicked_links?.length ? (
                         <span title={r.clicked_links.join('\n')}>
                           {r.clicked_links.length === 1
@@ -207,7 +207,12 @@ export default function CampanaDetalle() {
                         </span>
                       ) : '—'}
                     </td>
-                    <td className="tabular">{r.bounced ? 'Sí' : '—'}</td>
+                    {/* Una queja de spam y un rebote no son lo mismo y no pueden leerse
+                        igual: la queja es lo unico que Gmail castiga de verdad.
+                        Mismas palabras que el panel del cliente. */}
+                    <td className="tabular cell-fecha">
+                      {r.complained ? 'Marcó spam' : r.bounced ? 'Rebotó' : 'Entregado'}
+                    </td>
                   </tr>
                 ))}
             </tbody>

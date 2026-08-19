@@ -357,6 +357,15 @@ tbody tr:last-child td{ border-bottom:none; }
 tbody tr:hover{ background:rgba(255,255,255,0.02); }
 .row-clickable{ cursor:pointer; }
 .cell-name{ color:var(--ink); font-weight:600; }
+/* Una fecha no se parte en varias lineas. La tabla reparte el ancho segun el
+   contenido: una campana con correos largos le come la columna a la fecha y
+   la deja en cuatro lineas, mientras la misma pantalla con correos cortos la
+   muestra en una sola. La UI no puede cambiar por cliente. Si no cabe, la
+   tarjeta ya scrollea horizontal (overflowX:auto). */
+td.cell-fecha{ white-space:nowrap; }
+/* Un enlace suelto puede ser una URL larguisima: se corta con puntos
+   suspensivos y la lista completa sigue en el title. */
+td.cell-enlace{ max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .cell-sub{ color:var(--dim-2); font-size:11px; margin-top:2px; font-weight:500; }
 
 .pill{ display:inline-flex; align-items:center; gap:5px; font-size:10px; letter-spacing:0.02em; padding:4px 10px; border-radius:20px; text-transform:uppercase; font-weight:700; }
