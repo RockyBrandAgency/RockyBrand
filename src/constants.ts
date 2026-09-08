@@ -80,9 +80,17 @@ export function statusMeta(status?: string) {
   return STATUS_META[status || ''] || { label: status || 'Desconocido', cls: 'never' };
 }
 
+// Respaldo mientras la API no responde: la lista real vive en
+// rockybrand-panel-config (config_id `chile-fly-fishing-panel`, campo
+// data.projects) y la pisa apenas llega. Un cliente nuevo hay que agregarlo
+// en LOS DOS lados o desaparece del selector cada vez que la API tarda.
 export const DEFAULT_PROJECTS: Project[] = [
   { id: 'chile-fly-fishing', name: 'Chile Fly Fishing', protected: true, agents: AGENT_FUNCTION_KEYS, tools: TOOL_KEYS },
   { id: 'alto-castillo', name: 'Alto Castillo', protected: false, agents: AGENT_FUNCTION_KEYS, tools: TOOL_KEYS },
+  // Karibu no contrato agentes de contenido (services.agents=false en
+  // client-config, que es el gate real): su panel es Email Marketing, CRM y
+  // PMS. Por eso 'agentes' no esta entre sus herramientas.
+  { id: 'karibu-safari-africa', name: 'Karibu Safari Africa', protected: false, agents: [], tools: ['email-marketing', 'metricas'] },
 ];
 
 export const DOW_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -95,4 +103,5 @@ export const DOW_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 export const PROJECT_LOGO: Record<string, string> = {
   'chile-fly-fishing': '/Logo-ChileFlyFishing.png',
   'alto-castillo': '/logo-white.png',
+  'karibu-safari-africa': '/logo-karibu-safari-africa.svg',
 };
