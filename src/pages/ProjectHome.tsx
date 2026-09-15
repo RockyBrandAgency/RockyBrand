@@ -108,10 +108,20 @@ export default function ProjectHome() {
   const latestPiece = mostRecentPiece(flatPieces);
   const daveStatus = agentStatus.strategist;
 
-  const comunidadTotal =
-    summary && (summary.social.instagram.followers !== null || summary.social.facebook.followers !== null || summary.social.youtube.followers !== null)
-      ? (summary.social.instagram.followers ?? 0) + (summary.social.facebook.followers ?? 0) + (summary.social.youtube.followers ?? 0)
-      : null;
+  // TikTok entra al total desde el 2026-09-14, cuando se conectó su API.
+  // `social.tiktok` es null para el cliente que no la tenga autorizada, que
+  // es la mayoría - de ahí el encadenamiento opcional en vez de asumirlo.
+  const seguidoresPorRed = summary
+    ? [
+        summary.social.instagram.followers,
+        summary.social.facebook.followers,
+        summary.social.youtube.followers,
+        summary.social.tiktok?.followers ?? null,
+      ]
+    : [];
+  const comunidadTotal = seguidoresPorRed.some((v) => v !== null)
+    ? seguidoresPorRed.reduce((acc: number, v) => acc + (v ?? 0), 0)
+    : null;
 
   const metaAlert = summary?.system_health.meta_api;
 
@@ -193,11 +203,17 @@ export default function ProjectHome() {
               <span className="card2-value-unit">seguidores</span>
             </div>
             <div className="card2-delta card2-delta-neutral">
-              {summary?.social.instagram.delta_7d_pct != null || summary?.social.facebook.delta_7d_pct != null || summary?.social.youtube.delta_7d_pct != null ? (
+              {summary?.social.instagram.delta_7d_pct != null || summary?.social.facebook.delta_7d_pct != null || summary?.social.youtube.delta_7d_pct != null || summary?.social.tiktok?.delta_7d_pct != null ? (
                 <span className="card2-delta-pill card2-delta-pill-neutral">
                   IG {summary.social.instagram.delta_7d_pct != null ? (summary.social.instagram.delta_7d_pct >= 0 ? '+' : '') + summary.social.instagram.delta_7d_pct + '%' : 's/d'} · FB{' '}
                   {summary.social.facebook.delta_7d_pct != null ? (summary.social.facebook.delta_7d_pct >= 0 ? '+' : '') + summary.social.facebook.delta_7d_pct + '%' : 's/d'} · YT{' '}
                   {summary.social.youtube.delta_7d_pct != null ? (summary.social.youtube.delta_7d_pct >= 0 ? '+' : '') + summary.social.youtube.delta_7d_pct + '%' : 's/d'}
+                  {summary.social.tiktok ? (
+                    <>
+                      {' '}· TT{' '}
+                      {summary.social.tiktok.delta_7d_pct != null ? (summary.social.tiktok.delta_7d_pct >= 0 ? '+' : '') + summary.social.tiktok.delta_7d_pct + '%' : 's/d'}
+                    </>
+                  ) : null}
                 </span>
               ) : (
                 <span className="card2-delta-pill card2-delta-pill-neutral">Sin comparación</span>
@@ -217,6 +233,12 @@ export default function ProjectHome() {
               <span>YouTube</span>
               <span className="card2-mini-value">{summary?.social.youtube.followers != null ? summary.social.youtube.followers.toLocaleString('es-CL') : '—'}</span>
             </div>
+            {summary?.social.tiktok && (
+              <div className="card2-mini-row">
+                <span>TikTok</span>
+                <span className="card2-mini-value">{summary.social.tiktok.followers != null ? summary.social.tiktok.followers.toLocaleString('es-CL') : '—'}</span>
+              </div>
+            )}
           </div>
         </Reveal>
       </div>

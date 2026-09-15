@@ -249,7 +249,10 @@ export interface HomeSummary {
     instagram: SocialDomainSummary;
     facebook: SocialDomainSummary;
     youtube: SocialDomainSummary;
-    tiktok: null;
+    // null hasta el 2026-09-14, cuando se conectó la API de TikTok. Sigue
+    // pudiendo ser null: el panel es multi-cliente y la mayoría no tiene una
+    // cuenta de TikTok autorizada.
+    tiktok: SocialDomainSummary | null;
   };
 }
 
