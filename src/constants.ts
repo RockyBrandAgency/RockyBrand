@@ -91,6 +91,9 @@ export const DEFAULT_PROJECTS: Project[] = [
   // client-config, que es el gate real): su panel es Email Marketing, CRM y
   // PMS. Por eso 'agentes' no esta entre sus herramientas.
   { id: 'karibu-safari-africa', name: 'Karibu Safari Africa', protected: false, agents: [], tools: ['email-marketing', 'metricas'] },
+  // Bionam no contrato agentes de contenido (services.agents=false en
+  // client-config): arranca solo con Email Marketing, mismo caso que Karibu.
+  { id: 'bionam', name: 'Bionam', protected: false, agents: [], tools: ['email-marketing', 'metricas'] },
 ];
 
 export const DOW_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -104,4 +107,5 @@ export const PROJECT_LOGO: Record<string, string> = {
   'chile-fly-fishing': '/Logo-ChileFlyFishing.png',
   'alto-castillo': '/logo-white.png',
   'karibu-safari-africa': '/logo-karibu-safari-africa.svg',
+  'bionam': '/logo-bionam.svg',
 };
