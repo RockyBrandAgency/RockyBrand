@@ -14,7 +14,12 @@ async function request<T>(path: string, options?: { method?: string; body?: unkn
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: options?.body !== undefined ? JSON.stringify(options.body) : undefined,
   });
-  if (res.status === 401) throw new UnauthorizedError();
+  // 401 y 403: desde que las rutas de staff del PMS tienen un authorizer de
+  // API Gateway (2026-09-19), una sesión vencida no la rechaza el handler con
+  // 401 sino el authorizer, y un authorizer Lambda deniega con 403. Tratar
+  // sólo el 401 dejaba al staff viendo "Error de conexión con el PMS" en vez
+  // de volver al login, con la sesión vencida y sin forma de saberlo.
+  if (res.status === 401 || res.status === 403) throw new UnauthorizedError();
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data as { error?: string }).error || 'Error de conexión con el PMS');
   return data as T;
