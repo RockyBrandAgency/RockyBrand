@@ -3,7 +3,11 @@ import type { ClientAlertsResponse, ClientFeatures, ClientServices, CostsOvervie
   CalendarioPendienteResponse,
 } from './types';
 
-const CONFIG_API_URL = 'https://1gfa1uwd8i.execute-api.us-east-2.amazonaws.com/config';
+// H6 (auditoria Well-Architected, 21-sep-2026): URL configurable por variable
+// de entorno, con el valor real de produccion como respaldo si Amplify no la
+// tiene definida - asi este cambio no puede romper el build ni el login
+// existente aunque la variable no se configure antes del proximo deploy.
+const CONFIG_API_URL = import.meta.env.VITE_PANEL_API_URL || 'https://1gfa1uwd8i.execute-api.us-east-2.amazonaws.com/config';
 const TOKEN_STORAGE_KEY = 'rockybrandPanelToken';
 
 export function getStoredToken(): string | null {
