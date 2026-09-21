@@ -1,0 +1,33 @@
+name: Panel de staff
+
+# Sin filtro de rama y con `push` ademas de `pull_request`, mismo criterio que
+# 06-dashboard-web: este proyecto no usa Pull Requests, se pushea directo.
+on:
+  push:
+  pull_request:
+
+jobs:
+  verificar:
+    name: Tipos y lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # `build` corre `tsc -b` antes de Vite: si los tipos no cierran, falla
+      # aca y no en el navegador de quien opera el panel.
+      - name: Compilar
+        run: npm run build
+
+      - name: Lint
+        run: npm run lint
+
+      # Sin "Pruebas": a diferencia de 06-dashboard-web, este repo no tiene
+      # un solo test hoy (no hay script `test` en package.json). Agregarlo
+      # aca seria un paso que miente que verifica algo.
