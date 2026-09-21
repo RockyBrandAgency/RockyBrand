@@ -1,7 +1,8 @@
 import { getStoredToken, UnauthorizedError } from './api';
 import type { PmsGuest, PmsBooking, PmsAddon, PmsItinerary, PmsMonthlyOverview } from './types';
 
-const PMS_API_URL = 'https://laer7rii87.execute-api.us-east-2.amazonaws.com/pms';
+// H6 (auditoria Well-Architected, 21-sep-2026): mismo criterio que api.ts.
+const PMS_API_URL = import.meta.env.VITE_PMS_API_URL || 'https://laer7rii87.execute-api.us-east-2.amazonaws.com/pms';
 
 function authHeaders(): Record<string, string> {
   const token = getStoredToken();
