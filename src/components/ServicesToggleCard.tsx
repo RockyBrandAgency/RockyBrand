@@ -14,6 +14,7 @@ const SERVICE_META: Record<ServiceKey, { label: string; icon: string }> = {
   whatsapp: { label: 'WhatsApp (asistente y avisos)', icon: '✆' },
   content_approval: { label: 'Aprobación de contenido', icon: '✓' },
   agencias: { label: 'Agencias (portal B2B)', icon: '⇄' },
+  publicacion: { label: 'Publicación de Reels (Berry)', icon: '▶' },
 };
 
 // Los dos últimos existían en client-config y los leía el backend
@@ -25,8 +26,14 @@ const SERVICE_META: Record<ServiceKey, { label: string; icon: string }> = {
 // `agencias` se sumó el 2026-08-19 por el mismo motivo un nivel más arriba:
 // el servicio existía en el backend y en el sidebar del cliente, pero el
 // panel no tenía cómo prenderlo.
+// `publicacion` (Berry, 2026-09-22) entra acá el MISMO día que nace el
+// servicio, y no después: el backend arma el bloque `services` con las claves
+// que salen de esta lista, así que una clave ausente se borra en silencio al
+// mover cualquier otro toggle. Es literalmente lo que ya pasó dos veces (ver
+// arriba); no hacía falta que pasara una tercera.
 const SERVICE_KEYS: ServiceKey[] = [
   'agents', 'pms', 'crm', 'email_marketing', 'store', 'whatsapp', 'content_approval', 'agencias',
+  'publicacion',
 ];
 
 // Sub-opciones DENTRO de un servicio: qué pantallas ve el cliente del

@@ -18,7 +18,7 @@ export type ToolKey = 'agentes' | 'email-marketing' | 'metricas';
 // staff. Entra el 2026-08-19 con el resto de las funcionalidades.
 export type ServiceKey =
   | 'agents' | 'pms' | 'crm' | 'email_marketing' | 'store'
-  | 'whatsapp' | 'content_approval' | 'agencias';
+  | 'whatsapp' | 'content_approval' | 'agencias' | 'publicacion';
 export type ClientServices = Record<ServiceKey, boolean>;
 
 // Sub-opciones DENTRO de un servicio (no on/off del servicio completo) -
