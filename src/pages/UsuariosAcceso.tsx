@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   callAction,
   listClientUsers,
@@ -6,15 +7,21 @@ import {
   resetClientUserPassword,
   setClientUserEnabled,
   signoutClientUser,
+  setClientUserRole,
+  resetClientUserMfa,
+  ROLES_CLIENTE,
+  ROL_CLIENTE_POR_DEFECTO,
+  nombreRol,
+  type RolCliente,
   UnauthorizedError,
   ReauthRequiredError,
   formatWhen,
   getClientDashboardUrl,
   type ClientUser,
-  type ClientOption,
-} from '../api';
+  type ClientOption, ApiError, MENSAJE_COMUN_POR_CODIGO } from '../api';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
+import MfaPropio from '../components/MfaPropio';
 
 interface PanelUser {
   sub: string;
@@ -45,6 +52,11 @@ const EVENT_LABEL: Record<string, string> = {
   CLIENT_USER_ENABLED: 'Acceso de cliente devuelto',
   CLIENT_SESSIONS_REVOKED: 'Sesiones de cliente cerradas',
   CLIENT_ACCESS_DENIED: 'Acción sobre cliente rechazada',
+  CLIENT_ROLE_CHANGED: 'Rol de cliente cambiado',
+  CLIENT_MFA_RESET: 'Código de cliente restablecido',
+  STAFF_MFA_SETUP_STARTED: 'Inscripción de código iniciada',
+  STAFF_MFA_ENABLED: 'Código de verificación activado',
+  LOGIN_CHALLENGE: 'Paso extra al ingresar',
 };
 
 // Los eventos que hay que poder distinguir de un vistazo en la auditoría:
@@ -85,8 +97,10 @@ function generateTempPassword(): string {
 
 /** Lo que espera la confirmación de contraseña para ejecutarse. */
 type AccionPendiente =
-  | { tipo: 'crear'; clientId: string; email: string }
+  | { tipo: 'crear'; clientId: string; email: string; rol: RolCliente }
   | { tipo: 'clave'; user: ClientUser }
+  | { tipo: 'rol'; user: ClientUser }
+  | { tipo: 'mfa'; user: ClientUser }
   | { tipo: 'estado'; user: ClientUser; habilitar: boolean };
 
 interface CredencialNueva {
@@ -98,6 +112,7 @@ interface CredencialNueva {
 
 export default function UsuariosAcceso() {
   const { handleUnauthorized } = useAuth();
+  const { hash } = useLocation();
   const [users, setUsers] = useState<PanelUser[] | null>(null);
   const [events, setEvents] = useState<AccessEvent[] | null>(null);
   const [loadError, setLoadError] = useState('');
@@ -113,6 +128,9 @@ export default function UsuariosAcceso() {
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [nuevoCliente, setNuevoCliente] = useState('');
   const [nuevoEmail, setNuevoEmail] = useState('');
+  const [nuevoRol, setNuevoRol] = useState<RolCliente>(ROL_CLIENTE_POR_DEFECTO);
+  // Rol elegido dentro del modal de «Cambiar rol».
+  const [rolElegido, setRolElegido] = useState<RolCliente>(ROL_CLIENTE_POR_DEFECTO);
   const [clientMsg, setClientMsg] = useState('');
   const [pendiente, setPendiente] = useState<AccionPendiente | null>(null);
   const [reauthPassword, setReauthPassword] = useState('');
@@ -181,6 +199,7 @@ export default function UsuariosAcceso() {
     setClientMsg('');
     setReauthPassword('');
     setReauthError('');
+    if (accion.tipo === 'rol') setRolElegido(accion.user.rol || ROL_CLIENTE_POR_DEFECTO);
     setPendiente(accion);
   }
 
@@ -200,12 +219,25 @@ export default function UsuariosAcceso() {
     setReauthError('');
     try {
       if (pendiente.tipo === 'crear') {
-        const r = await createClientUser(pendiente.clientId, pendiente.email, reauthPassword);
+        const r = await createClientUser(pendiente.clientId, pendiente.email, pendiente.rol, reauthPassword);
         setCredencial({ email: r.email, clientId: r.client_id, password: r.password, motivo: 'creada' });
         setNuevoEmail('');
+        setNuevoRol(ROL_CLIENTE_POR_DEFECTO);
       } else if (pendiente.tipo === 'clave') {
         const r = await resetClientUserPassword(pendiente.user.client_id, pendiente.user.username, reauthPassword);
         setCredencial({ email: r.email, clientId: r.client_id, password: r.password, motivo: 'rotada' });
+      } else if (pendiente.tipo === 'rol') {
+        if (rolElegido === pendiente.user.rol) {
+          setReauthError('Elige un rol distinto al actual.');
+          return;
+        }
+        const r = await setClientUserRole(pendiente.user.client_id, pendiente.user.username, rolElegido, reauthPassword);
+        setClientMsg(`${r.email} ahora tiene el rol ${nombreRol(r.rol)}. Sus sesiones abiertas se cerraron.`);
+      } else if (pendiente.tipo === 'mfa') {
+        const r = await resetClientUserMfa(pendiente.user.client_id, pendiente.user.username, reauthPassword);
+        setClientMsg(
+          `Se restableció el código de verificación de ${r.email}. Desde ahora entra solo con su clave, hasta que vuelva a activar el código desde la Configuración de su panel.`
+        );
       } else {
         const r = await setClientUserEnabled(
           pendiente.user.client_id,
@@ -228,6 +260,15 @@ export default function UsuariosAcceso() {
       }
       // La contraseña no era correcta: el modal se queda abierto para
       // reintentar, en vez de perder la acción y hacer empezar de nuevo.
+      if (e instanceof ReauthRequiredError) {
+        // 401 `reauth_requerida`: faltó la clave. 403 `credenciales`: mala.
+        setReauthError(e.codigo === 'reauth_requerida' ? 'Escribe tu contraseña para confirmar.' : 'La contraseña no es correcta.');
+        return;
+      }
+      if (e instanceof ApiError && e.codigo && MENSAJE_COMUN_POR_CODIGO[e.codigo]) {
+        setReauthError(MENSAJE_COMUN_POR_CODIGO[e.codigo]);
+        return;
+      }
       setReauthError(e instanceof Error && e.message ? e.message : 'No se pudo ejecutar.');
     } finally {
       setEjecutando(false);
@@ -266,7 +307,7 @@ export default function UsuariosAcceso() {
       setClientMsg('Ingresa un email válido.');
       return;
     }
-    pedirConfirmacion({ tipo: 'crear', clientId: nuevoCliente, email: correo });
+    pedirConfirmacion({ tipo: 'crear', clientId: nuevoCliente, email: correo, rol: nuevoRol });
   }
 
   async function copiarClave() {
@@ -288,16 +329,24 @@ export default function UsuariosAcceso() {
       ? 'Crear acceso de cliente'
       : pendiente?.tipo === 'clave'
         ? 'Cambiar la contraseña del cliente'
-        : pendiente?.habilitar
+        : pendiente?.tipo === 'rol'
+          ? 'Cambiar el rol'
+          : pendiente?.tipo === 'mfa'
+            ? 'Restablecer el código de verificación'
+            : pendiente?.habilitar
           ? 'Devolver el acceso'
           : 'Cortar el acceso';
 
   const detalleModal =
     pendiente?.tipo === 'crear'
-      ? `Se va a crear ${pendiente.email} como acceso de ${nombreCliente(pendiente.clientId)}.`
+      ? `Se va a crear ${pendiente.email} como acceso ${nombreRol(pendiente.rol)} de ${nombreCliente(pendiente.clientId)}.`
       : pendiente?.tipo === 'clave'
         ? `${pendiente.user.email} va a recibir una contraseña nueva y todas sus sesiones abiertas se van a cerrar.`
-        : pendiente
+        : pendiente?.tipo === 'rol'
+          ? `${pendiente.user.email} tiene hoy el rol ${nombreRol(pendiente.user.rol)}. Al cambiarlo, sus sesiones abiertas se cierran.`
+          : pendiente?.tipo === 'mfa'
+            ? `Se desactiva el código de ${pendiente.user.email}, por ejemplo porque perdió el teléfono. Desde ahora entra solo con su clave, hasta que vuelva a activar el código desde la Configuración de su panel.`
+            : pendiente
           ? pendiente.habilitar
             ? `${pendiente.user.email} va a poder volver a entrar a su panel.`
             : `${pendiente.user.email} va a dejar de poder entrar. Es reversible.`
@@ -312,6 +361,8 @@ export default function UsuariosAcceso() {
         clientes — la superficie más sensible del sistema. Cada acción queda registrada abajo,
         con fecha, IP y resultado.
       </div>
+
+      <MfaPropio enfocar={hash === '#mfa'} />
 
       <div className="section-head" style={{ marginTop: 32 }}>
         <span className="section-title">Crear usuario de RockyBrand</span>
@@ -410,6 +461,17 @@ export default function UsuariosAcceso() {
           </select>
         </div>
         <div className="crm-field">
+          <label htmlFor="nuevo-rol">Rol</label>
+          <select id="nuevo-rol" value={nuevoRol} onChange={(e) => setNuevoRol(e.target.value as RolCliente)}>
+            {ROLES_CLIENTE.map((r) => (
+              <option key={r.valor} value={r.valor}>
+                {r.nombre}
+              </option>
+            ))}
+          </select>
+          <div className="field-hint">Lectura solo mira; Editor además cambia contenido; Admin además gestiona su cuenta.</div>
+        </div>
+        <div className="crm-field">
           <label>Email del cliente</label>
           <input
             placeholder="contacto@sucliente.cl"
@@ -436,6 +498,8 @@ export default function UsuariosAcceso() {
               <th>Cliente</th>
               <th>Email</th>
               <th>Estado</th>
+              <th>Rol</th>
+              <th>MFA</th>
               <th>Alta</th>
               <th style={{ textAlign: 'right' }}>Acciones</th>
             </tr>
@@ -451,8 +515,38 @@ export default function UsuariosAcceso() {
                     {u.enabled ? u.status : 'Deshabilitado'}
                   </span>
                 </td>
+                <td>
+                  <span className={`pill ${u.rol ? 'subscribed' : 'scheduled'}`}>
+                    <span className="pill-dot" />
+                    {nombreRol(u.rol)}
+                  </span>
+                </td>
+                <td>
+                  <span
+                    className={`pill ${u.mfa_inscrito === true ? 'subscribed' : u.mfa_inscrito === false ? 'scheduled' : 'draft'}`}
+                  >
+                    <span className="pill-dot" />
+                    {u.mfa_inscrito === true ? 'Activo' : u.mfa_inscrito === false ? 'Sin activar' : 'Sin dato'}
+                  </span>
+                </td>
                 <td className="tabular">{formatWhen(u.created_at)}</td>
-                <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                <td style={{ textAlign: 'right', minWidth: 220 }}>
+                  {/* Seis acciones: se reparten en filas en vez de estirar la tabla. */}
+                  <div className="acciones-fila">
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => pedirConfirmacion({ tipo: 'rol', user: u })}
+                  >
+                    Cambiar rol
+                  </button>
+                  {u.mfa_inscrito !== false && (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => pedirConfirmacion({ tipo: 'mfa', user: u })}
+                    >
+                      Restablecer MFA
+                    </button>
+                  )}
                   <button
                     className="btn btn-ghost btn-sm"
                     onClick={() => pedirConfirmacion({ tipo: 'clave', user: u })}
@@ -472,6 +566,7 @@ export default function UsuariosAcceso() {
                   >
                     {u.enabled ? 'Cortar acceso' : 'Devolver acceso'}
                   </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -518,9 +613,26 @@ export default function UsuariosAcceso() {
 
       {pendiente && (
         <Modal title={tituloModal} sub={detalleModal} onClose={cerrarModal}>
+          {pendiente.tipo === 'rol' && (
+            <div className="crm-field">
+              <label htmlFor="rol-elegido">Rol nuevo</label>
+              <select
+                id="rol-elegido"
+                value={rolElegido}
+                onChange={(e) => setRolElegido(e.target.value as RolCliente)}
+              >
+                {ROLES_CLIENTE.map((r) => (
+                  <option key={r.valor} value={r.valor}>
+                    {r.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="crm-field">
-            <label>Tu contraseña</label>
+            <label htmlFor="reauth-password">Tu contraseña</label>
             <input
+              id="reauth-password"
               type="password"
               autoFocus
               value={reauthPassword}
@@ -535,7 +647,7 @@ export default function UsuariosAcceso() {
             </div>
           </div>
           {reauthError && (
-            <div className="manual-invoke-msg" style={{ marginTop: 10, color: '#e07856' }}>
+            <div className="manual-invoke-msg" role="alert" style={{ marginTop: 10, color: '#e07856' }}>
               {reauthError}
             </div>
           )}

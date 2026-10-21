@@ -44,7 +44,15 @@ export class UnauthorizedError extends Error {
 // credenciales de un cliente. Es un error distinto de UnauthorizedError
 // a propósito: la sesión sigue siendo válida, lo que falta es la prueba
 // de que quien la está usando es el dueño.
-export class ReauthRequiredError extends Error {}
+// `codigo`: `reauth_requerida` (401, faltó la clave) o `credenciales` (403,
+// clave incorrecta). Solo el segundo es «la contraseña no es correcta».
+export class ReauthRequiredError extends Error {
+  codigo?: string;
+  constructor(message: string, codigo?: string) {
+    super(message);
+    this.codigo = codigo;
+  }
+}
 
 export async function login(username: string, password: string): Promise<string> {
   const res = await fetch(CONFIG_API_URL, {
@@ -52,22 +60,136 @@ export async function login(username: string, password: string): Promise<string>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ __action: 'login', username, password }),
   });
-  if (!res.ok) throw new Error('Credenciales inválidas');
+  if (!res.ok) {
+    // Trae `codigo` como panel_login: 401 `credenciales` y 429 `bloqueado`.
+    // Sin texto, vacío: la pantalla pone su mensaje de servidor.
+    const fallo = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    throw new ApiError(typeof fallo.error === 'string' ? fallo.error : '', res.status, codigoDe(fallo));
+  }
   const data = await res.json();
   return data.token;
 }
 
 // Login real, multi-usuario, vía Cognito - el default. `login()` de arriba
 // (password compartida) queda como respaldo permanente, no se retira.
-export async function panelLogin(username: string, password: string): Promise<string> {
+//
+// Puede terminar en un token o en un desafío de Cognito (código de 6
+// dígitos, inscripción del código o clave nueva obligatoria). El desafío se
+// responde con `panelLoginChallenge` y puede encadenar otro desafío.
+
+export type DesafioLogin = 'SOFTWARE_TOKEN_MFA' | 'MFA_SETUP' | 'NEW_PASSWORD_REQUIRED';
+
+export type ResultadoLogin =
+  | { tipo: 'token'; token: string; mfaInscrito: boolean | null }
+  | {
+      tipo: 'desafio';
+      desafio: DesafioLogin;
+      session: string;
+      /**
+       * Cuenta firmada por el servidor (opaca, vence en 15 min). El paso
+       * siguiente la devuelve tal cual: sin ella, o con la de otra session,
+       * los tres desafíos (SOFTWARE_TOKEN_MFA, MFA_SETUP y
+       * NEW_PASSWORD_REQUIRED) responden 400 `faltan_datos`.
+       */
+      cuenta?: string;
+      secretCode?: string;
+      otpauthUri?: string;
+    };
+
+/** Texto que pone callAction cuando la respuesta de error no trae `error`. */
+export const MSG_SERVIDOR_POR_DEFECTO = 'Hubo un problema en el servidor. Intenta de nuevo en un momento.';
+
+// Textos por `codigo` que comparten el login, la reautenticación y MfaPropio.
+// Sin minutos ni intentos en el bloqueo: no se dan detalles.
+
+export const MENSAJE_COMUN_POR_CODIGO: Record<string, string> = {
+  bloqueado: 'Hubo demasiados intentos. Espera unos minutos e intenta de nuevo.',
+  desafio_no_soportado: 'Tu cuenta pide un paso que el panel aún no maneja. Avísale al equipo.',
+};
+
+/**
+ * Error de una llamada a la API con su código HTTP y, si el backend lo manda,
+ * su `codigo` (identificador estable del caso). La pantalla decide el texto
+ * por `codigo`; si no viene, muestra el texto del servidor.
+ */
+export class ApiError extends Error {
+  status: number;
+  codigo?: string;
+  constructor(message: string, status: number, codigo?: string) {
+    super(message);
+    this.status = status;
+    this.codigo = codigo;
+  }
+}
+
+function codigoDe(data: unknown): string | undefined {
+  const c = (data as { codigo?: unknown } | null)?.codigo;
+  return typeof c === 'string' && c ? c : undefined;
+}
+
+function leerResultadoLogin(data: Record<string, unknown>): ResultadoLogin {
+  if (typeof data.token === 'string' && data.token) {
+    const mfa = data.mfa_inscrito;
+    return { tipo: 'token', token: data.token, mfaInscrito: typeof mfa === 'boolean' ? mfa : null };
+  }
+  const desafio = data.challenge;
+  if (
+    (desafio === 'SOFTWARE_TOKEN_MFA' || desafio === 'MFA_SETUP' || desafio === 'NEW_PASSWORD_REQUIRED') &&
+    typeof data.session === 'string' &&
+    data.session
+  ) {
+    return {
+      tipo: 'desafio',
+      desafio,
+      session: data.session,
+      cuenta: typeof data.cuenta === 'string' && data.cuenta ? data.cuenta : undefined,
+      secretCode: typeof data.secret_code === 'string' ? data.secret_code : undefined,
+      otpauthUri: typeof data.otpauth_uri === 'string' ? data.otpauth_uri : undefined,
+    };
+  }
+  if (typeof desafio === 'string' && desafio) {
+    throw new ApiError(`El servidor pidió un paso que este panel todavía no maneja (${desafio}). Avisa al equipo técnico.`, 500, codigoDe(data));
+  }
+  throw new ApiError('Respuesta inesperada del servidor.', 500, codigoDe(data));
+}
+
+async function postLogin(cuerpo: Record<string, unknown>): Promise<ResultadoLogin> {
   const res = await fetch(CONFIG_API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ __action: 'panel_login', username, password }),
+    body: JSON.stringify(cuerpo),
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((data as { error?: string }).error || 'Credenciales inválidas');
-  return data.token;
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!res.ok) {
+    // Sin texto del backend (cuerpo vacío, text/plain o sin `error`): texto
+    // vacío, y la pantalla pone su mensaje de servidor. Un 401 o 400 sin
+    // cuerpo no prueba que la clave esté mal.
+    const texto = typeof data.error === 'string' && data.error ? data.error : '';
+    throw new ApiError(texto, res.status, codigoDe(data));
+  }
+  return leerResultadoLogin(data);
+}
+
+export async function panelLogin(username: string, password: string): Promise<ResultadoLogin> {
+  return postLogin({ __action: 'panel_login', username, password });
+}
+
+/** Responde un desafío con el código de 6 dígitos o con la clave nueva. */
+export async function panelLoginChallenge(
+  username: string,
+  desafio: DesafioLogin,
+  session: string,
+  respuesta: { code: string } | { new_password: string },
+  cuenta?: string
+): Promise<ResultadoLogin> {
+  return postLogin({
+    __action: 'panel_login_challenge',
+    username,
+    challenge: desafio,
+    session,
+    ...(cuenta ? { cuenta } : {}),
+    ...respuesta,
+  });
 }
 
 export async function loadState<T = Record<string, unknown>>(projectId?: string): Promise<T> {
@@ -98,9 +220,12 @@ export async function callAction<T = unknown>(action: string, extra?: Record<str
   // El 401 con reauth_required NO es una sesión caída - no hay que echar al
   // usuario del panel, hay que pedirle la contraseña. Se revisa antes del
   // UnauthorizedError justamente por eso.
-  if (fallo.reauth_required) throw new ReauthRequiredError(fallo.error || 'Confirma tu contraseña.');
+  if (fallo.reauth_required) throw new ReauthRequiredError(fallo.error || 'Confirma tu contraseña.', codigoDe(data));
   if (res.status === 401) throw new UnauthorizedError();
-  if (!res.ok) throw new Error(fallo.error || 'Error de conexión');
+  if (!res.ok) {
+    // Sin texto del backend no se adivina la causa: mensaje de servidor.
+    throw new ApiError(fallo.error || MSG_SERVIDOR_POR_DEFECTO, res.status, codigoDe(data));
+  }
   return data as T;
 }
 
@@ -171,6 +296,30 @@ export interface ClientUser {
   enabled: boolean;
   status: string;
   created_at?: string;
+  /**
+   * null: el usuario no está en ningún grupo de rol (acceso anterior a los
+   * roles). El dashboard lo trata como Admin por `ROL_SIN_GRUPO`, así que acá
+   * se muestra «Admin (sin asignar)», no como si no tuviera permisos.
+   */
+  rol?: RolCliente | null;
+  /** null: no se pudo consultar. */
+  mfa_inscrito?: boolean | null;
+}
+
+export type RolCliente = 'cliente-lectura' | 'cliente-editor' | 'cliente-admin';
+
+export const ROLES_CLIENTE: { valor: RolCliente; nombre: string }[] = [
+  { valor: 'cliente-lectura', nombre: 'Lectura' },
+  { valor: 'cliente-editor', nombre: 'Editor' },
+  { valor: 'cliente-admin', nombre: 'Admin' },
+];
+
+export const ROL_CLIENTE_POR_DEFECTO: RolCliente = 'cliente-admin';
+
+export const NOMBRE_ROL_SIN_ASIGNAR = 'Admin (sin asignar)';
+
+export function nombreRol(rol?: RolCliente | null): string {
+  return ROLES_CLIENTE.find((r) => r.valor === rol)?.nombre || NOMBRE_ROL_SIN_ASIGNAR;
 }
 
 export interface ClientOption {
@@ -186,9 +335,48 @@ export async function listClientUsers(): Promise<{ users: ClientUser[]; clients:
 export async function createClientUser(
   clientId: string,
   email: string,
+  rol: RolCliente,
   reauthPassword: string
-): Promise<{ email: string; client_id: string; password: string }> {
-  return callAction('create_client_user', { client_id: clientId, email, reauth_password: reauthPassword });
+): Promise<{ email: string; client_id: string; rol: RolCliente; password: string }> {
+  return callAction('create_client_user', { client_id: clientId, email, rol, reauth_password: reauthPassword });
+}
+
+/** Cambia el rol y cierra todas las sesiones abiertas de ese usuario. */
+export async function setClientUserRole(
+  clientId: string,
+  username: string,
+  rol: RolCliente,
+  reauthPassword: string
+): Promise<{ email: string; client_id: string; rol: RolCliente }> {
+  return callAction('set_client_user_role', { client_id: clientId, username, rol, reauth_password: reauthPassword });
+}
+
+/**
+ * Desactiva el código de verificación de quien perdió el teléfono. El pool
+ * tiene MFA opcional: desde ahí entra solo con su clave, hasta que vuelva a
+ * activar el código desde la Configuración de su panel.
+ */
+export async function resetClientUserMfa(
+  clientId: string,
+  username: string,
+  reauthPassword: string
+): Promise<{ email: string; client_id: string; mfa_inscrito: false }> {
+  return callAction('reset_client_user_mfa', { client_id: clientId, username, reauth_password: reauthPassword });
+}
+
+// ===== Código de verificación (MFA) del propio staff =====
+// Las dos piden la contraseña otra vez: el backend vuelve a autenticar con
+// Cognito en el servidor y el token de Cognito nunca llega al navegador.
+
+export async function staffMfaIniciar(reauthPassword: string): Promise<{ secret_code: string; otpauth_uri: string }> {
+  return callAction('staff_mfa_iniciar', { reauth_password: reauthPassword });
+}
+
+export async function staffMfaVerificar(
+  reauthPassword: string,
+  code: string
+): Promise<{ ok: boolean; mfa_inscrito: boolean }> {
+  return callAction('staff_mfa_verificar', { reauth_password: reauthPassword, code });
 }
 
 /** Rota la clave y cierra todas las sesiones abiertas de ese usuario. */
